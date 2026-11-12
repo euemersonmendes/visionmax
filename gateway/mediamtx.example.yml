@@ -1,0 +1,36 @@
+# Exemplo de configuração MediaMTX para DVR/NVR Intelbras
+# Copie este arquivo para gateway/mediamtx.yml e preencha seu usuário, senha e IP
+
+logLevel: info
+
+rtsp: no
+rtmp: no
+webrtc: no
+srt: no
+
+hls: yes
+hlsAddress: :8888
+hlsAllowOrigins: ['*']
+hlsAlwaysRemux: yes
+hlsVariant: mpegts
+hlsSegmentCount: 5
+hlsSegmentDuration: 1s
+hlsPartDuration: 200ms
+
+paths:
+  cam01:
+    source: rtsp://USUARIO:SENHA@IP_DO_DVR:554/cam/realmonitor?channel=1&subtype=1
+    rtspTransport: tcp
+    sourceOnDemand: yes
+  cam02:
+    source: rtsp://USUARIO:SENHA@IP_DO_DVR:554/cam/realmonitor?channel=2&subtype=1
+    rtspTransport: tcp
+    sourceOnDemand: yes
+  cam03:
+    source: rtsp://USUARIO:SENHA@IP_DO_DVR:554/cam/realmonitor?channel=3&subtype=1
+    rtspTransport: tcp
+    sourceOnDemand: yes
+  cam04:
+    source: rtsp://USUARIO:SENHA@IP_DO_DVR:554/cam/realmonitor?channel=4&subtype=1
+    rtspTransport: tcp
+    sourceOnDemand: yes

@@ -1,0 +1,747 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+  <title>VISION MAX — Simulador iPhone 16 Pro</title>
+  <style>
+    :root {
+      --bg-primary: #060A12;
+      --bg-secondary: #0D1422;
+      --bg-card: #121B2E;
+      --bg-elevated: #18243D;
+      --border: #1E2D4A;
+      --cyan: #00E5FF;
+      --green: #00E676;
+      --amber: #FFB300;
+      --red: #FF1744;
+      --text: #F1F5F9;
+      --text-sec: #94A3B8;
+    }
+    * { box-sizing: border-box; margin: 0; padding: 0; font-family: -apple-system, BlinkMacSystemFont, "SF Pro Display", "Segoe UI", Roboto, sans-serif; user-select: none; }
+    body {
+      background: radial-gradient(circle at top, #132038 0%, #04070D 100%);
+      color: var(--text);
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      padding: 16px;
+    }
+    .sim-TopBar {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      margin-bottom: 12px;
+      background: rgba(18, 27, 46, 0.85);
+      border: 1px solid var(--border);
+      padding: 8px 16px;
+      border-radius: 999px;
+      font-size: 12px;
+      color: var(--text-sec);
+    }
+    .sim-TopBar strong { color: var(--cyan); }
+    /* iPhone 16 Pro Chassis */
+    .iphone-frame {
+      width: 402px;
+      height: 852px;
+      max-width: 100%;
+      background: var(--bg-primary);
+      border-radius: 54px;
+      border: 10px solid #1E2533;
+      box-shadow: 0 0 0 2px #3A465E, 0 28px 70px rgba(0, 0, 0, 0.85), 0 0 45px rgba(0, 229, 255, 0.12);
+      position: relative;
+      overflow: hidden;
+      display: flex;
+      flex-direction: column;
+    }
+    /* iOS Status Bar + Dynamic Island */
+    .ios-statusbar {
+      height: 44px;
+      background: var(--bg-secondary);
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 0 26px;
+      font-size: 13px;
+      font-weight: 700;
+      position: relative;
+      z-index: 20;
+    }
+    .dynamic-island {
+      width: 116px;
+      height: 28px;
+      background: #000;
+      border-radius: 20px;
+      position: absolute;
+      left: 50%;
+      transform: translateX(-50%);
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 0 10px;
+      border: 1px solid #182234;
+    }
+    .di-cam { width: 9px; height: 9px; border-radius: 50%; background: #122438; border: 1.5px solid #23496D; }
+    .di-led { width: 6px; height: 6px; border-radius: 50%; background: var(--green); box-shadow: 0 0 6px var(--green); }
+
+    /* App Header */
+    .app-header {
+      background: var(--bg-secondary);
+      padding: 10px 14px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      border-bottom: 1px solid var(--border);
+    }
+    .brand-group { display: flex; align-items: center; gap: 9px; }
+    .brand-logo {
+      width: 34px; height: 34px; border-radius: 9px;
+      background: var(--cyan); color: #060A12;
+      display: flex; align-items: center; justify-content: center;
+      font-weight: 900; font-size: 16px;
+    }
+    .brand-title { font-size: 14px; font-weight: 900; letter-spacing: 0.5px; display: flex; align-items: center; gap: 5px; }
+    .pro-badge { font-size: 8.5px; background: rgba(0,229,255,0.16); border: 1px solid var(--cyan); color: var(--cyan); padding: 1px 5px; border-radius: 4px; }
+    .brand-sub { font-size: 10px; color: var(--text-sec); }
+
+    .header-actions { display: flex; align-items: center; gap: 6px; }
+    .mode-pill {
+      display: flex; align-items: center; gap: 5px;
+      font-size: 9.5px; font-weight: 800;
+      padding: 5px 8px; border-radius: 7px;
+      background: var(--bg-card); border: 1px solid var(--green); color: var(--green);
+    }
+    .mode-dot { width: 6px; height: 6px; border-radius: 50%; background: currentColor; }
+    .sos-btn {
+      background: var(--red); color: #fff; border: none;
+      padding: 6px 10px; border-radius: 7px;
+      font-size: 10.5px; font-weight: 900; cursor: pointer;
+      display: flex; align-items: center; gap: 4px;
+    }
+    .sos-btn.active { animation: blinkRed 0.6s infinite alternate; }
+
+    @keyframes blinkRed {
+      from { background: var(--red); transform: scale(1); }
+      to { background: #2979FF; transform: scale(1.04); }
+    }
+
+    /* Toast */
+    .toast-bar {
+      background: #13233F;
+      border-bottom: 1px solid var(--cyan);
+      color: var(--text);
+      font-size: 11px;
+      font-weight: 600;
+      padding: 7px 14px;
+      display: none;
+      align-items: center;
+      gap: 6px;
+    }
+    .toast-bar.visible { display: flex; }
+
+    /* Scroll Content */
+    .app-content {
+      flex: 1;
+      overflow-y: auto;
+      padding: 11px;
+      display: flex;
+      flex-direction: column;
+      gap: 11px;
+    }
+    .app-content::-webkit-scrollbar { width: 0; }
+
+    /* Security Mode Strip */
+    .card {
+      background: var(--bg-card);
+      border: 1px solid var(--border);
+      border-radius: 13px;
+      padding: 11px;
+    }
+    .card-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px; }
+    .card-title { font-size: 12.5px; font-weight: 800; }
+    .card-tag { font-size: 10.5px; color: var(--cyan); font-weight: 700; }
+    .modes-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 6px; }
+    .mode-btn {
+      background: var(--bg-secondary);
+      border: 1px solid var(--border);
+      border-radius: 9px;
+      padding: 8px 4px;
+      color: var(--text-sec);
+      font-size: 10px;
+      font-weight: 700;
+      cursor: pointer;
+      text-align: center;
+      transition: 0.15s;
+    }
+    .mode-btn.active {
+      border-color: var(--cyan);
+      background: rgba(0, 229, 255, 0.12);
+      color: var(--text);
+    }
+
+    /* Layout Toolbar */
+    .toolbar { display: flex; justify-content: space-between; align-items: center; }
+    .seg-group { display: flex; background: var(--bg-card); padding: 3px; border-radius: 9px; border: 1px solid var(--border); gap: 3px; }
+    .seg-btn {
+      background: transparent; border: none; color: var(--text-sec);
+      font-size: 10.5px; font-weight: 700; padding: 5px 9px; border-radius: 6px; cursor: pointer;
+    }
+    .seg-btn.active { background: var(--cyan); color: #060A12; font-weight: 800; }
+
+    /* Quad Grid */
+    .cam-grid-quad { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+    .cam-grid-list { display: flex; flex-direction: column; gap: 10px; }
+
+    .cam-box {
+      height: 162px;
+      background: #050811;
+      border-radius: 12px;
+      border: 1px solid var(--border);
+      position: relative;
+      overflow: hidden;
+      cursor: pointer;
+      display: flex;
+      flex-direction: column;
+      justify-content: space-between;
+    }
+    .cam-grid-list .cam-box { height: 195px; }
+    .cam-box:hover { border-color: var(--cyan); }
+    .cam-scene {
+      position: absolute;
+      inset: 0;
+      transition: transform 0.25s ease;
+    }
+    /* Architectural SVG/CSS scenes */
+    .scene-1 { background: linear-gradient(180deg, #091326 0%, #16233A 55%, #121C2D 100%); }
+    .scene-2 { background: linear-gradient(180deg, #0D1420 0%, #182234 50%, #101722 100%); }
+    .scene-3 { background: linear-gradient(180deg, #071629 0%, #0C2D48 60%, #132235 100%); }
+    .scene-4 { background: linear-gradient(180deg, #0B1914 0%, #132920 55%, #0E1D17 100%); }
+
+    .ai-box {
+      position: absolute;
+      border: 1.5px solid var(--amber);
+      background: rgba(255, 179, 0, 0.08);
+      border-radius: 4px;
+      pointer-events: none;
+    }
+    .ai-box.vehicle { border-color: var(--cyan); background: rgba(0, 229, 255, 0.08); }
+    .ai-tag {
+      position: absolute;
+      top: -15px; left: -1px;
+      background: var(--amber);
+      color: #050811;
+      font-size: 8px;
+      font-weight: 900;
+      padding: 1px 4px;
+      border-radius: 3px;
+      white-space: nowrap;
+    }
+    .ai-box.vehicle .ai-tag { background: var(--cyan); }
+
+    .hud-top, .hud-bottom {
+      position: relative;
+      z-index: 2;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 5px 7px;
+      background: rgba(6, 10, 18, 0.65);
+    }
+    .rec-badge {
+      display: flex; align-items: center; gap: 4px;
+      font-size: 8.5px; font-weight: 800;
+      background: rgba(15,23,42,0.9); padding: 2px 5px; border-radius: 4px;
+    }
+    .rec-dot { width: 6px; height: 6px; border-radius: 50%; background: var(--red); animation: pulse 1s infinite; }
+    @keyframes pulse { 50% { opacity: 0.25; } }
+    .ch-tag {
+      font-size: 8.5px; font-weight: 800; color: var(--cyan);
+      background: rgba(0,229,255,0.15); border: 1px solid rgba(0,229,255,0.4);
+      padding: 1.5px 5px; border-radius: 4px;
+    }
+    .res-tag { font-size: 8.5px; color: #CBD5E1; font-weight: 700; }
+    .cam-name { font-size: 11px; font-weight: 800; color: var(--text); }
+    .cam-zone { font-size: 9.5px; color: var(--text-sec); }
+    .expand-pill {
+      background: rgba(0,229,255,0.16); border: 1px solid rgba(0,229,255,0.45);
+      color: var(--cyan); font-size: 9.5px; font-weight: 800;
+      padding: 3px 6px; border-radius: 5px;
+    }
+
+    /* Telemetry Strip */
+    .telemetry-bar {
+      display: grid; grid-template-columns: repeat(3, 1fr);
+      background: var(--bg-card); border: 1px solid var(--border);
+      border-radius: 11px; padding: 9px; text-align: center;
+    }
+    .t-val { font-size: 12.5px; font-weight: 800; }
+    .t-lbl { font-size: 9.5px; color: var(--text-sec); margin-top: 2px; }
+
+    /* Bottom Navigation */
+    .bottom-nav {
+      height: 64px;
+      background: var(--bg-secondary);
+      border-top: 1px solid var(--border);
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      padding-bottom: 8px;
+    }
+    .nav-btn {
+      background: none; border: none; color: var(--text-sec);
+      display: flex; flex-direction: column; align-items: center; justify-content: center;
+      gap: 3px; font-size: 10px; font-weight: 700; cursor: pointer;
+    }
+    .nav-btn.active { color: var(--cyan); font-weight: 800; }
+
+    /* Fullscreen PTZ Modal inside iPhone */
+    .fs-modal {
+      position: absolute;
+      inset: 44px 0 0 0;
+      background: var(--bg-primary);
+      z-index: 30;
+      display: none;
+      flex-direction: column;
+    }
+    .fs-modal.open { display: flex; }
+    .fs-header {
+      background: var(--bg-secondary);
+      padding: 9px 12px;
+      display: flex; justify-content: space-between; align-items: center;
+      border-bottom: 1px solid var(--border);
+    }
+    .fs-back {
+      background: var(--bg-card); border: 1px solid var(--border);
+      color: var(--text); padding: 5px 10px; border-radius: 7px;
+      font-size: 11px; font-weight: 700; cursor: pointer;
+    }
+    .fs-tabs { display: flex; gap: 4px; }
+    .fs-tab {
+      background: var(--bg-card); border: 1px solid var(--border);
+      color: var(--text-sec); padding: 5px 8px; border-radius: 6px;
+      font-size: 10px; font-weight: 700; cursor: pointer;
+    }
+    .fs-tab.active { border-color: var(--cyan); color: var(--cyan); background: rgba(0,229,255,0.14); }
+
+    .fs-body { flex: 1; overflow-y: auto; padding: 11px; display: flex; flex-direction: column; gap: 10px; }
+    .fs-viewport { height: 215px; border-radius: 13px; border: 1.5px solid rgba(0,229,255,0.4); position: relative; overflow: hidden; display: flex; flex-direction: column; justify-content: space-between; }
+
+    .zoom-row { display: flex; justify-content: space-between; align-items: center; background: var(--bg-card); padding: 8px 11px; border-radius: 10px; border: 1px solid var(--border); }
+    .zoom-chips { display: flex; gap: 5px; }
+    .z-chip { background: var(--bg-secondary); border: 1px solid var(--border); color: var(--text-sec); padding: 4px 8px; border-radius: 6px; font-size: 10.5px; font-weight: 700; cursor: pointer; }
+    .z-chip.active { background: var(--cyan); color: #060A12; border-color: var(--cyan); font-weight: 900; }
+
+    .dpad-grid { display: grid; grid-template-columns: repeat(3, 46px); gap: 5px; justify-content: center; margin: 6px 0; }
+    .dpad-btn { height: 38px; border-radius: 8px; background: var(--bg-elevated); border: 1px solid rgba(0,229,255,0.3); color: var(--cyan); font-weight: 900; cursor: pointer; }
+    .dpad-btn:active { background: var(--cyan); color: #060A12; }
+
+    .ptt-btn {
+      width: 100%; padding: 11px; border-radius: 10px;
+      background: rgba(0,229,255,0.15); border: 1.5px solid var(--cyan);
+      color: var(--cyan); font-size: 11.5px; font-weight: 900; cursor: pointer;
+    }
+    .ptt-btn.talking { background: var(--cyan); color: #060A12; }
+
+    .tactical-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 6px; }
+    .tac-btn { background: var(--bg-card); border: 1px solid var(--border); border-radius: 9px; padding: 8px 6px; color: var(--text); font-size: 10.5px; font-weight: 700; cursor: pointer; text-align: center; }
+    .tac-btn.active { border-color: var(--amber); background: rgba(255,179,0,0.15); color: var(--amber); }
+
+    .home-indicator {
+      width: 134px; height: 5px; background: #475569; border-radius: 99px;
+      margin: 4px auto 7px;
+    }
+  </style>
+</head>
+<body>
+  <div class="sim-TopBar">
+    <span>📱 <strong>Simulador Interativo iPhone 16 Pro</strong> • VISION MAX Security</span>
+  </div>
+
+  <div class="iphone-frame">
+    <!-- iOS Status Bar -->
+    <div class="ios-statusbar">
+      <span id="ios-clock">19:35</span>
+      <div class="dynamic-island">
+        <div class="di-cam"></div>
+        <div class="di-led"></div>
+      </div>
+      <span>5G • 100%</span>
+    </div>
+
+    <!-- App Header -->
+    <div class="app-header">
+      <div class="brand-group">
+        <div class="brand-logo">V</div>
+        <div>
+          <div class="brand-title">VISION MAX <span class="pro-badge">4K AI</span></div>
+          <div class="brand-sub">Central Residencial • 4 Câmeras</div>
+        </div>
+      </div>
+      <div class="header-actions">
+        <div class="mode-pill" id="header-mode-pill">
+          <span class="mode-dot"></span>
+          <span id="header-mode-text">EM CASA</span>
+        </div>
+        <button class="sos-btn" id="sos-btn" onclick="togglePanic()">SOS</button>
+      </div>
+    </div>
+
+    <div class="toast-bar" id="toast-bar"></div>
+
+    <!-- Main Tab Views -->
+    <div class="app-content" id="main-view"></div>
+
+    <!-- Fullscreen Camera Modal -->
+    <div class="fs-modal" id="fs-modal">
+      <div class="fs-header">
+        <button class="fs-back" onclick="closeFullScreen()">▼ Voltar ao Quad-View</button>
+        <div class="fs-tabs" id="fs-tabs"></div>
+      </div>
+      <div class="fs-body">
+        <div class="fs-viewport" id="fs-viewport"></div>
+
+        <div class="zoom-row">
+          <span style="font-size:11.5px;font-weight:800;">🔍 Zoom Óptico/Digital</span>
+          <div class="zoom-chips" id="zoom-chips"></div>
+        </div>
+
+        <div class="card">
+          <div class="card-header">
+            <span class="card-title">🕹️ Controle PTZ 360° & Presets</span>
+            <span class="card-tag" id="ptz-coords">P:0° T:0° • 1.0x</span>
+          </div>
+          <div class="dpad-grid">
+            <button class="dpad-btn" onclick="movePTZ(-15, 12)">↖</button>
+            <button class="dpad-btn" onclick="movePTZ(0, 15)">▲</button>
+            <button class="dpad-btn" onclick="movePTZ(15, 12)">↗</button>
+            <button class="dpad-btn" onclick="movePTZ(-20, 0)">◀</button>
+            <button class="dpad-btn" onclick="resetPTZ()">HOME</button>
+            <button class="dpad-btn" onclick="movePTZ(20, 0)">▶</button>
+            <button class="dpad-btn" onclick="movePTZ(-15, -12)">↙</button>
+            <button class="dpad-btn" onclick="movePTZ(0, -15)">▼</button>
+            <button class="dpad-btn" onclick="movePTZ(15, -12)">↘</button>
+          </div>
+          <div style="display:flex;gap:6px;margin-top:8px;" id="preset-buttons"></div>
+        </div>
+
+        <div class="card">
+          <div class="card-header">
+            <span class="card-title">🎙️ Áudio Bidirecional (Interfone IP)</span>
+            <span class="card-tag" id="audio-state-lbl">Pronto</span>
+          </div>
+          <button class="ptt-btn" id="ptt-btn" onclick="toggleTalkback()">
+            🎤 PRESSIONE / TOQUE PARA FALAR NA CÂMERA
+          </button>
+        </div>
+
+        <div class="tactical-grid">
+          <button class="tac-btn" onclick="showToast('📸 Foto 4K Ultra HD salva na Galeria Segura!')">📸 Foto 4K</button>
+          <button class="tac-btn" id="btn-spotlight" onclick="toggleSpotlight()">🔦 Holofote LED</button>
+          <button class="tac-btn" onclick="cycleNV()">🌙 Visão Noturna</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Bottom Tab Bar -->
+    <div class="bottom-nav">
+      <button class="nav-btn active" id="tab-MONITOR" onclick="switchTab('MONITOR')">
+        <span>⊞</span><span>Quad-View</span>
+      </button>
+      <button class="nav-btn" id="tab-EVENTS" onclick="switchTab('EVENTS')">
+        <span>🔔</span><span>Eventos IA</span>
+      </button>
+      <button class="nav-btn" id="tab-SECURITY" onclick="switchTab('SECURITY')">
+        <span>🛡️</span><span>Residência</span>
+      </button>
+      <button class="nav-btn" id="tab-SETTINGS" onclick="switchTab('SETTINGS')">
+        <span>⚙️</span><span>Câmeras IP</span>
+      </button>
+    </div>
+    <div class="home-indicator"></div>
+  </div>
+
+  <script>
+    const state = {
+      tab: 'MONITOR',
+      mode: 'HOME',
+      layout: 'QUAD',
+      panic: false,
+      fsCamId: null,
+      talking: false,
+      cameras: [
+        { id: 1, name: 'Entrada Social & Portão', zone: 'Fachada Frontal', res: '4K UHD', bitrate: '6.4 Mbps', ip: '192.168.1.101', proto: 'SIMULATED', url: 'rtsp://admin:visionmax@192.168.1.101:554/cam/realmonitor?channel=1&subtype=0', pan: 0, tilt: 0, zoom: 1.0, light: false, nv: 'AUTO', aiLabel: 'Pessoa (98%)', aiType: 'person', presets: ['Portão Social', 'Calçada', 'Interfone'] },
+        { id: 2, name: 'Garagem & Acesso Veículos', zone: 'Garagem Coberta', res: '4K UHD', bitrate: '5.9 Mbps', ip: '192.168.1.102', proto: 'SIMULATED', url: 'rtsp://admin:visionmax@192.168.1.102:554/Streaming/Channels/101', pan: 0, tilt: 0, zoom: 1.0, light: true, nv: 'COLOR_NIGHT', aiLabel: 'SUV Estacionado (99%)', aiType: 'vehicle', presets: ['Vagas', 'Portão Basculante', 'Porta Interna'] },
+        { id: 3, name: 'Quintal, Gourmet & Piscina', zone: 'Área Externa Fundos', res: '2K QHD', bitrate: '4.3 Mbps', ip: '192.168.1.103', proto: 'SIMULATED', url: 'rtsp://admin:visionmax@192.168.1.103:554/h264Preview_01_main', pan: 0, tilt: 0, zoom: 1.0, light: false, nv: 'COLOR_NIGHT', aiLabel: 'Movimento Leve (91%)', aiType: 'person', presets: ['Piscina', 'Churrasqueira', 'Muro Fundos'] },
+        { id: 4, name: 'Corredor Lateral & Serviço', zone: 'Perímetro Lateral', res: '2K QHD', bitrate: '4.0 Mbps', ip: '192.168.1.104', proto: 'SIMULATED', url: 'rtsp://admin:visionmax@192.168.1.104:554/stream1', pan: 0, tilt: 0, zoom: 1.0, light: false, nv: 'IR_ON', aiLabel: 'Perímetro Limpo', aiType: 'vehicle', presets: ['Corredor', 'Portão Lateral', 'Lavanderia'] }
+      ]
+    };
+
+    function showToast(msg) {
+      const el = document.getElementById('toast-bar');
+      el.textContent = '⚡ ' + msg;
+      el.classList.add('visible');
+      clearTimeout(window.__toastTimer);
+      window.__toastTimer = setTimeout(() => el.classList.remove('visible'), 2800);
+    }
+
+    function setSecurityMode(m) {
+      state.mode = m;
+      const map = { DISARMED: 'DESARMADO', HOME: 'EM CASA', AWAY: 'AUSENTE TOTAL', NIGHT: 'MODO NOTURNO' };
+      document.getElementById('header-mode-text').textContent = map[m];
+      showToast('Modo de segurança alterado para: ' + map[m]);
+      render();
+    }
+
+    function togglePanic() {
+      state.panic = !state.panic;
+      const btn = document.getElementById('sos-btn');
+      btn.classList.toggle('active', state.panic);
+      btn.textContent = state.panic ? 'PARAR' : 'SOS';
+      showToast(state.panic ? '🚨 ALERTA DE PÂNICO! Sirenes 110dB e Holofotes das 4 câmeras acionados!' : 'Sirene de Pânico desativada.');
+    }
+
+    function switchTab(t) {
+      state.tab = t;
+      ['MONITOR', 'EVENTS', 'SECURITY', 'SETTINGS'].forEach(k => {
+        document.getElementById('tab-' + k).classList.toggle('active', k === t);
+      });
+      render();
+    }
+
+    function openFullScreen(id) {
+      state.fsCamId = id;
+      document.getElementById('fs-modal').classList.add('open');
+      renderFullScreen();
+    }
+
+    function closeFullScreen() {
+      state.fsCamId = null;
+      document.getElementById('fs-modal').classList.remove('open');
+      render();
+    }
+
+    function getActiveCam() {
+      return state.cameras.find(c => c.id === state.fsCamId) || state.cameras[0];
+    }
+
+    function movePTZ(dp, dt) {
+      const cam = getActiveCam();
+      cam.pan = Math.max(-100, Math.min(100, cam.pan + dp));
+      cam.tilt = Math.max(-100, Math.min(100, cam.tilt + dt));
+      renderFullScreen();
+    }
+
+    function resetPTZ() {
+      const cam = getActiveCam();
+      cam.pan = 0; cam.tilt = 0; cam.zoom = 1.0;
+      showToast('PTZ centralizado (0°, 0°, 1.0x)');
+      renderFullScreen();
+    }
+
+    function setZoom(z) {
+      const cam = getActiveCam();
+      cam.zoom = z;
+      renderFullScreen();
+    }
+
+    function toggleTalkback() {
+      state.talking = !state.talking;
+      const btn = document.getElementById('ptt-btn');
+      const lbl = document.getElementById('audio-state-lbl');
+      btn.classList.toggle('talking', state.talking);
+      btn.textContent = state.talking ? '🔊 TRANSMITINDO VOZ AO VIVO (TOQUE P/ PARAR)' : '🎤 PRESSIONE / TOQUE PARA FALAR NA CÂMERA';
+      lbl.textContent = state.talking ? 'Transmitindo Áudio' : 'Pronto';
+      if (state.talking) showToast('Microfone bidirecional aberto na CAM 0' + getActiveCam().id);
+    }
+
+    function toggleSpotlight() {
+      const cam = getActiveCam();
+      cam.light = !cam.light;
+      showToast('Holofote LED CAM 0' + cam.id + ': ' + (cam.light ? 'ACESO' : 'APAGADO'));
+      renderFullScreen();
+    }
+
+    function cycleNV() {
+      const cam = getActiveCam();
+      const order = ['AUTO', 'IR_ON', 'COLOR_NIGHT', 'OFF'];
+      cam.nv = order[(order.indexOf(cam.nv) + 1) % order.length];
+      showToast('Visão Noturna CAM 0' + cam.id + ': ' + cam.nv);
+      renderFullScreen();
+    }
+
+    function renderFullScreen() {
+      const cam = getActiveCam();
+      document.getElementById('fs-tabs').innerHTML = state.cameras.map(c =>
+        `<button class="fs-tab ${c.id === cam.id ? 'active' : ''}" onclick="openFullScreen(${c.id})">CAM 0${c.id}</button>`
+      ).join('');
+
+      document.getElementById('fs-viewport').innerHTML = `
+        <div class="cam-scene scene-${cam.id}" style="transform: scale(${cam.zoom}) translate(${-cam.pan * 0.6}px, ${cam.tilt * 0.45}px); ${cam.light ? 'box-shadow: inset 0 0 90px rgba(254,240,138,0.28);' : ''}">
+          <div class="ai-box ${cam.aiType === 'vehicle' ? 'vehicle' : ''}" style="left:28%;top:32%;width:38%;height:42%;">
+            <div class="ai-tag">${cam.aiLabel}</div>
+          </div>
+        </div>
+        <div class="hud-top">
+          <div style="display:flex;gap:5px;align-items:center;">
+            <div class="rec-badge"><span class="rec-dot"></span>REC</div>
+            <span class="ch-tag">CAM 0${cam.id} • ${cam.nv}</span>
+          </div>
+          <span class="res-tag">${cam.res} • ${cam.bitrate}</span>
+        </div>
+        <div class="hud-bottom">
+          <div>
+            <div class="cam-name">${cam.name}</div>
+            <div class="cam-zone">${cam.zone} • IP ${cam.ip}</div>
+          </div>
+          <span class="ch-tag">${cam.zoom.toFixed(1)}x</span>
+        </div>
+      `;
+
+      document.getElementById('ptz-coords').textContent = `P:${cam.pan}° T:${cam.tilt}° • ${cam.zoom.toFixed(1)}x`;
+      document.getElementById('zoom-chips').innerHTML = [1.0, 1.5, 2.0, 3.0, 4.0].map(z =>
+        `<button class="z-chip ${cam.zoom === z ? 'active' : ''}" onclick="setZoom(${z})">${z.toFixed(1)}x</button>`
+      ).join('');
+
+      document.getElementById('preset-buttons').innerHTML = cam.presets.map((p, idx) =>
+        `<button class="z-chip" style="flex:1;" onclick="movePTZ(${(idx-1)*25}, ${(idx%2)*15});showToast('Preset aplicado: ${p}')">📍 ${p}</button>`
+      ).join('');
+
+      document.getElementById('btn-spotlight').classList.toggle('active', cam.light);
+    }
+
+    function render() {
+      const container = document.getElementById('main-view');
+      if (state.tab === 'MONITOR') {
+        container.innerHTML = `
+          <div class="card">
+            <div class="card-header">
+              <span class="card-title">🛡️ Modo de Proteção da Residência</span>
+              <span class="card-tag">4 Zonas Ativas</span>
+            </div>
+            <div class="modes-grid">
+              ${[
+                { id: 'DISARMED', l: '🔓 Desarmado' },
+                { id: 'HOME', l: '🏠 Em Casa' },
+                { id: 'AWAY', l: '🛡️ Ausente' },
+                { id: 'NIGHT', l: '🌙 Noite' }
+              ].map(m => `<button class="mode-btn ${state.mode === m.id ? 'active' : ''}" onclick="setSecurityMode('${m.id}')">${m.l}</button>`).join('')}
+            </div>
+          </div>
+
+          <div class="toolbar">
+            <div class="seg-group">
+              <button class="seg-btn ${state.layout === 'QUAD' ? 'active' : ''}" onclick="state.layout='QUAD';render()">Quad 2x2</button>
+              <button class="seg-btn ${state.layout === 'LIST' ? 'active' : ''}" onclick="state.layout='LIST';render()">Lista HD 1x4</button>
+            </div>
+            <span style="font-size:10.5px;color:var(--cyan);font-weight:700;">Toque na câmera p/ PTZ & Voz</span>
+          </div>
+
+          <div class="${state.layout === 'QUAD' ? 'cam-grid-quad' : 'cam-grid-list'}">
+            ${state.cameras.map(cam => `
+              <div class="cam-box" onclick="openFullScreen(${cam.id})">
+                <div class="cam-scene scene-${cam.id}" style="transform: scale(${cam.zoom}) translate(${-cam.pan * 0.4}px, ${cam.tilt * 0.3}px);">
+                  <div class="ai-box ${cam.aiType === 'vehicle' ? 'vehicle' : ''}" style="left:26%;top:34%;width:42%;height:40%;">
+                    <div class="ai-tag">${cam.aiLabel}</div>
+                  </div>
+                </div>
+                <div class="hud-top">
+                  <div style="display:flex;gap:4px;align-items:center;">
+                    <div class="rec-badge"><span class="rec-dot"></span>REC</div>
+                    <span class="ch-tag">CAM 0${cam.id}</span>
+                  </div>
+                  <span class="res-tag">${cam.res.split(' ')[0]}</span>
+                </div>
+                <div class="hud-bottom">
+                  <div>
+                    <div class="cam-name">${cam.name}</div>
+                    <div class="cam-zone">${cam.zone}</div>
+                  </div>
+                  <span class="expand-pill">⤢ PTZ</span>
+                </div>
+              </div>
+            `).join('')}
+          </div>
+
+          <div class="telemetry-bar">
+            <div><div class="t-val" style="color:var(--green)">4 / 4</div><div class="t-lbl">Câmeras Online</div></div>
+            <div><div class="t-val">20.6 Mbps</div><div class="t-lbl">Bitrate Total</div></div>
+            <div><div class="t-val" style="color:var(--cyan)">NVR 2TB OK</div><div class="t-lbl">Gravação 24/7</div></div>
+          </div>
+        `;
+      } else if (state.tab === 'EVENTS') {
+        container.innerHTML = `
+          <div class="card">
+            <div class="card-header"><span class="card-title">⏱️ Linha do Tempo NVR 24 Horas</span><span class="card-tag">IA Neural Ativa</span></div>
+            <p style="font-size:11px;color:var(--text-sec);">Eventos classificados por Inteligência Artificial nas 4 câmeras:</p>
+          </div>
+          ${[
+            { cam: 1, title: 'Pessoa Detectada no Portão Social', time: 'Hoje, 19:08 • Clipe 18s', desc: 'IA Vision identificou entregador próximo ao interfone (98% confiança).' },
+            { cam: 3, title: 'Movimento no Deck da Piscina', time: 'Hoje, 18:54 • Clipe 12s', desc: 'Classificado como Pet / Movimento seguro pela análise neural.' },
+            { cam: 2, title: 'Veículo Residencial Estacionado', time: 'Hoje, 18:20 • Clipe 34s', desc: 'Entrada autorizada registrada na Garagem Coberta.' },
+            { cam: 4, title: 'Visão Noturna IR Matrix Ativada', time: 'Hoje, 17:58 • Sistema', desc: 'Comutação automática de infravermelho no Corredor Lateral.' }
+          ].map(e => `
+            <div class="card" style="display:flex;flex-direction:column;gap:6px;">
+              <div style="display:flex;justify-content:space-between;align-items:center;">
+                <strong style="font-size:12px;color:var(--text);">${e.title}</strong>
+                <span class="ch-tag">CAM 0${e.cam}</span>
+              </div>
+              <span style="font-size:10px;color:var(--cyan);font-weight:700;">${e.time}</span>
+              <p style="font-size:11px;color:var(--text-sec);">${e.desc}</p>
+              <button class="z-chip active" style="align-self:flex-end;" onclick="openFullScreen(${e.cam})">▶ Abrir Câmera 0${e.cam}</button>
+            </div>
+          `).join('')}
+        `;
+      } else if (state.tab === 'SECURITY') {
+        container.innerHTML = `
+          <div class="card" style="border-color:var(--red);background:rgba(255,23,68,0.1);">
+            <div class="card-header"><span class="card-title">🚨 Sirene Geral & Dissuasão Ativa</span></div>
+            <p style="font-size:11px;color:var(--text-sec);margin-bottom:8px;">Aciona simultaneamente as sirenes de 110dB e holofotes LED das 4 câmeras.</p>
+            <button class="sos-btn" style="width:100%;justify-content:center;padding:10px;" onclick="togglePanic()">ACIONAR / TESTAR ALARME GERAL</button>
+          </div>
+          ${[
+            { name: 'Fechadura Biométrica Social', zone: 'Fachada Frontal (CAM 01)', st: 'TRANCADA', cam: 1 },
+            { name: 'Portão Basculante Motorizado', zone: 'Garagem Coberta (CAM 02)', st: 'FECHADO', cam: 2 },
+            { name: 'Barreira IVA Infravermelho', zone: 'Quintal & Piscina (CAM 03)', st: 'ARMADA', cam: 3 },
+            { name: 'Sensor Magnético Portão Lateral', zone: 'Corredor Lateral (CAM 04)', st: 'FECHADO', cam: 4 }
+          ].map(s => `
+            <div class="card" style="display:flex;justify-content:space-between;align-items:center;">
+              <div>
+                <div style="font-size:12px;font-weight:800;">${s.name}</div>
+                <div style="font-size:10.5px;color:var(--text-sec);">${s.zone}</div>
+              </div>
+              <div style="display:flex;gap:6px;align-items:center;">
+                <span class="ch-tag" style="color:var(--green);border-color:var(--green);">${s.st}</span>
+                <button class="z-chip" onclick="openFullScreen(${s.cam})">Ver CAM</button>
+              </div>
+            </div>
+          `).join('')}
+        `;
+      } else if (state.tab === 'SETTINGS') {
+        container.innerHTML = `
+          <div class="card">
+            <div class="card-header"><span class="card-title">⚙️ Configuração Híbrida (RTSP / HLS / ONVIF)</span></div>
+            <p style="font-size:11px;color:var(--text-sec);margin-bottom:8px;">Configure os IPs e URLs de stream das suas 4 câmeras (Intelbras, Hikvision, Tapo ou HLS):</p>
+            ${state.cameras.map(c => `
+              <div style="padding:8px 0;border-top:1px solid var(--border);display:flex;flex-direction:column;gap:4px;">
+                <div style="display:flex;justify-content:space-between;">
+                  <strong style="font-size:11.5px;color:var(--cyan);">CAM 0${c.id} • ${c.name}</strong>
+                  <span class="ch-tag">${c.proto}</span>
+                </div>
+                <div style="font-size:10px;color:var(--text-sec);font-family:monospace;word-break:break-all;">${c.url}</div>
+                <div style="display:flex;gap:6px;margin-top:4px;">
+                  <button class="z-chip" onclick="showToast('Handshake RTSP/ONVIF validado em ${c.ip} (18ms)')">Testar Conexão IP</button>
+                  <button class="z-chip active" onclick="openFullScreen(${c.id})">Ajustar PTZ</button>
+                </div>
+              </div>
+            `).join('')}
+          </div>
+        `;
+      }
+    }
+
+    render();
+  </script>
+</body>
+</html>
+

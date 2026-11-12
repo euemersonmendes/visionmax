@@ -1,0 +1,30 @@
+{
+  "expo": {
+    "name": "VISION MAX Security",
+    "slug": "vision-max-security",
+    "version": "1.0.0",
+    "orientation": "default",
+    "userInterfaceStyle": "light",
+    "backgroundColor": "#F5F7FA",
+    "primaryColor": "#0D9488",
+    "ios": {
+      "supportsTablet": true,
+      "bundleIdentifier": "com.visionmax.security",
+      "infoPlist": {
+        "NSMicrophoneUsageDescription": "O VISION MAX utiliza o microfone para comunicação de áudio bidirecional (Push-To-Talk) com as câmeras da residência."
+      }
+    },
+    "android": {
+      "package": "com.visionmax.security",
+      "permissions": [
+        "RECORD_AUDIO",
+        "MODIFY_AUDIO_SETTINGS",
+        "INTERNET"
+      ]
+    },
+    "web": {
+      "bundler": "metro"
+    }
+  }
+}
+

@@ -1,0 +1,26 @@
+# Dependencies
+node_modules/
+
+# Expo
+.expo/
+dist/
+web-build/
+
+# Native build folders
+ios/
+android/
+
+# Credentials & local gateway secrets
+*.jks
+*.p8
+*.p12
+*.key
+auto.crt
+*.mobileprovision
+*.orig.*
+.env*.local
+gateway/mediamtx.yml
+
+# macOS
+.DS_Store
+visionmax/
