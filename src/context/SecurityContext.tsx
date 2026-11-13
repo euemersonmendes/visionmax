@@ -16,8 +16,8 @@ import {
 import { buildCameraStreamUrl } from '../utils/cameraUrlBuilder';
 import { loadStorageItem, saveStorageItem, removeStorageItem } from '../utils/storage';
 
-const STORAGE_CONFIG_KEY = 'visionmax_intelbras_config_v2';
-const STORAGE_CAMERAS_KEY = 'visionmax_cameras_v2';
+const STORAGE_CONFIG_KEY = 'visionmax_intelbras_config_v3';
+const STORAGE_CAMERAS_KEY = 'visionmax_cameras_v3';
 
 export const DEFAULT_INTELBRAS_CONFIG: IntelbrasSystemConfig = {
   systemName: 'Minha Residência',
@@ -33,7 +33,7 @@ export const DEFAULT_INTELBRAS_CONFIG: IntelbrasSystemConfig = {
   username: 'admin',
   password: 'Dell@1304',
   totalChannels: 4,
-  defaultSubtype: 'SUB_SD',
+  defaultSubtype: 'MAIN_HD',
   protocol: 'HLS',
   isConfiguredByUser: true,
 };
@@ -131,7 +131,7 @@ const INITIAL_CAMERAS: CameraDevice[] = [
     httpPort: 80,
     onvifPort: 37777,
     dvrChannel: 1,
-    streamSubtype: 'SUB_SD',
+    streamSubtype: 'MAIN_HD',
     username: 'admin',
     password: 'Dell@1304',
     protocol: 'HLS',
@@ -194,7 +194,7 @@ const INITIAL_CAMERAS: CameraDevice[] = [
     httpPort: 80,
     onvifPort: 37777,
     dvrChannel: 2,
-    streamSubtype: 'SUB_SD',
+    streamSubtype: 'MAIN_HD',
     username: 'admin',
     password: 'Dell@1304',
     protocol: 'HLS',
@@ -257,7 +257,7 @@ const INITIAL_CAMERAS: CameraDevice[] = [
     httpPort: 80,
     onvifPort: 37777,
     dvrChannel: 3,
-    streamSubtype: 'SUB_SD',
+    streamSubtype: 'MAIN_HD',
     username: 'admin',
     password: 'Dell@1304',
     protocol: 'HLS',
@@ -320,7 +320,7 @@ const INITIAL_CAMERAS: CameraDevice[] = [
     httpPort: 80,
     onvifPort: 37777,
     dvrChannel: 4,
-    streamSubtype: 'SUB_SD',
+    streamSubtype: 'MAIN_HD',
     username: 'admin',
     password: 'Dell@1304',
     protocol: 'HLS',

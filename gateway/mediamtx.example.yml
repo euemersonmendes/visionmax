@@ -19,18 +19,19 @@ hlsPartDuration: 200ms
 
 paths:
   cam01:
-    source: rtsp://USUARIO:SENHA@IP_DO_DVR:554/cam/realmonitor?channel=1&subtype=1
+    source: rtsp://USUARIO:SENHA@IP_DO_DVR:554/cam/realmonitor?channel=1&subtype=0
     rtspTransport: tcp
     sourceOnDemand: yes
   cam02:
-    source: rtsp://USUARIO:SENHA@IP_DO_DVR:554/cam/realmonitor?channel=2&subtype=1
+    source: rtsp://USUARIO:SENHA@IP_DO_DVR:554/cam/realmonitor?channel=2&subtype=0
     rtspTransport: tcp
     sourceOnDemand: yes
   cam03:
-    source: rtsp://USUARIO:SENHA@IP_DO_DVR:554/cam/realmonitor?channel=3&subtype=1
+    source: rtsp://USUARIO:SENHA@IP_DO_DVR:554/cam/realmonitor?channel=3&subtype=0
     rtspTransport: tcp
     sourceOnDemand: yes
   cam04:
-    source: rtsp://USUARIO:SENHA@IP_DO_DVR:554/cam/realmonitor?channel=4&subtype=1
+    source: rtsp://USUARIO:SENHA@IP_DO_DVR:554/cam/realmonitor?channel=4&subtype=0
     rtspTransport: tcp
     sourceOnDemand: yes
+

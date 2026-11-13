@@ -234,6 +234,7 @@ export const CameraFeedView: React.FC<CameraFeedViewProps> = ({
           <Video
             source={{ uri: camera.streamUrl }}
             style={styles.videoPlayer}
+            videoStyle={styles.videoElementCover as any}
             resizeMode={ResizeMode.COVER}
             shouldPlay
             isLooping
@@ -461,7 +462,7 @@ const styles = StyleSheet.create({
     overflow: 'hidden',
   },
   videoViewportCompact: {
-    aspectRatio: 16 / 10,
+    aspectRatio: 16 / 9,
   },
   videoViewportFull: {
     aspectRatio: 16 / 9,
@@ -469,6 +470,11 @@ const styles = StyleSheet.create({
   videoPlayer: {
     width: '100%',
     height: '100%',
+  },
+  videoElementCover: {
+    width: '100%',
+    height: '100%',
+    objectFit: 'cover',
   },
   sceneViewport: {
     width: '100%',
