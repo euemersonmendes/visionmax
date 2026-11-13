@@ -8,11 +8,17 @@ import {
 } from 'react-native';
 import { Ionicons, MaterialCommunityIcons } from '@expo/vector-icons';
 import { useSecurity } from '../context/SecurityContext';
+import { CameraFeedView } from '../components/CameraFeedView';
+import { buildDvrPlaybackUrl } from '../utils/cameraUrlBuilder';
 import { COLORS } from '../theme/colors';
 import { RADIUS, SHADOWS, SPACING } from '../theme/tokens';
 
+const SPEED_STEPS = [0.25, 0.5, 1.0, 2.0, 4.0, 8.0];
+const TIMELINE_SLOTS = ['08:00', '12:00', '16:00', '18:00', '19:00', '20:30', 'Agora'];
+
 export const EventsScreen: React.FC = () => {
   const {
+    intelbrasConfig,
     cameras,
     events,
     openFullScreenCamera,
@@ -21,13 +27,50 @@ export const EventsScreen: React.FC = () => {
   } = useSecurity();
 
   const [selectedCameraFilter, setSelectedCameraFilter] = useState<string>('ALL');
-  const [selectedScrubberHour, setSelectedScrubberHour] = useState<string>('19:00');
+  const [playbackCameraId, setPlaybackCameraId] = useState<string>(cameras[0]?.id || 'cam-01');
+  const [selectedDateMode, setSelectedDateMode] = useState<'TODAY' | 'YESTERDAY'>('TODAY');
+  const [selectedHour, setSelectedHour] = useState<string>('19:00');
+  const [minuteOffset, setMinuteOffset] = useState<number>(0);
+  const [speedIndex, setSpeedIndex] = useState<number>(2); // 1.0x
+  const [isPaused, setIsPaused] = useState<boolean>(false);
+
+  const playbackSpeed = SPEED_STEPS[speedIndex];
+  const playbackCamera = cameras.find((c) => c.id === playbackCameraId) || cameras[0];
+
+  const today = new Date();
+  if (selectedDateMode === 'YESTERDAY') {
+    today.setDate(today.getDate() - 1);
+  }
+  const dateIso = today.toISOString().split('T')[0];
+
+  const displayTime = (() => {
+    if (selectedHour === 'Agora') return 'Tempo Real';
+    const [hh, mm] = selectedHour.split(':').map(Number);
+    const totalMin = Math.max(0, Math.min(23 * 60 + 59, hh * 60 + mm + minuteOffset));
+    const nh = String(Math.floor(totalMin / 60)).padStart(2, '0');
+    const nm = String(totalMin % 60).padStart(2, '0');
+    return `${nh}:${nm}`;
+  })();
+
+  const dvrPlaybackUri = buildDvrPlaybackUrl({
+    ipAddress: intelbrasConfig.ipAddress || playbackCamera.ipAddress,
+    rtspPort: intelbrasConfig.rtspPort || 554,
+    username: intelbrasConfig.username || playbackCamera.username,
+    password: intelbrasConfig.password || playbackCamera.password,
+    channel: playbackCamera.dvrChannel || playbackCamera.channel,
+    dateIso,
+    timeStr: displayTime === 'Tempo Real' ? '21:00' : displayTime,
+  });
 
   const filteredEvents = events.filter((evt) =>
     selectedCameraFilter === 'ALL' ? true : evt.cameraId === selectedCameraFilter
   );
 
   const unacknowledgedCount = events.filter((e) => !e.acknowledged).length;
+
+  const adjustSpeed = (delta: number) => {
+    setSpeedIndex((prev) => Math.max(0, Math.min(SPEED_STEPS.length - 1, prev + delta)));
+  };
 
   const getEventStyle = (type: string) => {
     switch (type) {
@@ -70,31 +113,92 @@ export const EventsScreen: React.FC = () => {
       contentContainerStyle={styles.scrollContent}
       showsVerticalScrollIndicator={false}
     >
-      {/* 24H NVR TIMELINE CARD */}
-      <View style={styles.dvrScrubberCard}>
+      {/* DVR NVR PLAYBACK PLAYER */}
+      <View style={styles.playbackCard}>
         <View style={styles.dvrHeaderRow}>
           <View style={styles.dvrTitleWrap}>
             <MaterialCommunityIcons
               name="history"
-              size={18}
+              size={19}
               color={COLORS.brandPrimary}
             />
-            <Text style={styles.dvrTitle}>Linha do Tempo NVR 24h</Text>
+            <Text style={styles.dvrTitle}>Gravações do DVR (Playback)</Text>
           </View>
-          <View style={styles.dvrStatusChip}>
-            <View style={styles.dvrLiveDot} />
-            <Text style={styles.dvrStatusText}>Gravação 4 Canais</Text>
+          <View style={styles.dateSwitchRow}>
+            <TouchableOpacity
+              onPress={() => setSelectedDateMode('TODAY')}
+              style={[
+                styles.datePill,
+                selectedDateMode === 'TODAY' && styles.datePillActive,
+              ]}
+            >
+              <Text
+                style={[
+                  styles.datePillText,
+                  selectedDateMode === 'TODAY' && styles.datePillTextActive,
+                ]}
+              >
+                Hoje
+              </Text>
+            </TouchableOpacity>
+            <TouchableOpacity
+              onPress={() => setSelectedDateMode('YESTERDAY')}
+              style={[
+                styles.datePill,
+                selectedDateMode === 'YESTERDAY' && styles.datePillActive,
+              ]}
+            >
+              <Text
+                style={[
+                  styles.datePillText,
+                  selectedDateMode === 'YESTERDAY' && styles.datePillTextActive,
+                ]}
+              >
+                Ontem
+              </Text>
+            </TouchableOpacity>
           </View>
         </View>
 
+        {/* CHANNEL SELECTOR */}
+        <View style={styles.channelRow}>
+          {cameras.map((cam) => {
+            const active = cam.id === playbackCamera.id;
+            return (
+              <TouchableOpacity
+                key={cam.id}
+                onPress={() => setPlaybackCameraId(cam.id)}
+                style={[styles.chPill, active && styles.chPillActive]}
+                activeOpacity={0.75}
+              >
+                <Text style={[styles.chPillText, active && styles.chPillTextActive]}>
+                  CH 0{cam.channel}
+                </Text>
+              </TouchableOpacity>
+            );
+          })}
+        </View>
+
+        {/* PLAYBACK VIDEO VIEWPORT */}
+        <CameraFeedView
+          camera={playbackCamera}
+          playbackRate={playbackSpeed}
+          paused={isPaused}
+          onPressFeed={() => openFullScreenCamera(playbackCamera.id)}
+        />
+
+        {/* TIMELINE SCRUBBER */}
         <View style={styles.scrubberTrack}>
-          {['15:00', '16:00', '17:00', '18:00', '19:00', 'Agora'].map((hour) => {
-            const active = selectedScrubberHour === hour;
-            const hasMotion = hour === '19:00' || hour === '16:00';
+          {TIMELINE_SLOTS.map((hour) => {
+            const active = selectedHour === hour;
+            const hasMotion = hour === '19:00' || hour === '16:00' || hour === '20:30';
             return (
               <TouchableOpacity
                 key={hour}
-                onPress={() => setSelectedScrubberHour(hour)}
+                onPress={() => {
+                  setSelectedHour(hour);
+                  setMinuteOffset(0);
+                }}
                 style={[styles.scrubberSlot, active && styles.scrubberSlotActive]}
                 activeOpacity={0.75}
               >
@@ -123,22 +227,118 @@ export const EventsScreen: React.FC = () => {
           })}
         </View>
 
-        <View style={styles.legendRow}>
-          <View style={styles.legendItem}>
-            <View style={[styles.legendDot, { backgroundColor: COLORS.brandPrimary }]} />
-            <Text style={styles.legendText}>Gravação Contínua</Text>
+        {/* TRANSPORT CONTROLS (SEEK + PLAY/PAUSE) */}
+        <View style={styles.transportRow}>
+          <TouchableOpacity
+            onPress={() => setMinuteOffset((m) => m - 5)}
+            style={styles.seekBtn}
+          >
+            <Ionicons name="play-back-outline" size={14} color={COLORS.textPrimary} />
+            <Text style={styles.seekBtnText}>-5m</Text>
+          </TouchableOpacity>
+
+          <TouchableOpacity
+            onPress={() => setMinuteOffset((m) => m - 1)}
+            style={styles.seekBtn}
+          >
+            <Text style={styles.seekBtnText}>-1m</Text>
+          </TouchableOpacity>
+
+          <TouchableOpacity
+            onPress={() => setIsPaused((p) => !p)}
+            style={styles.playPauseBtn}
+            activeOpacity={0.8}
+          >
+            <Ionicons
+              name={isPaused ? 'play' : 'pause'}
+              size={16}
+              color="#FFFFFF"
+            />
+            <Text style={styles.playPauseText}>
+              {isPaused ? 'Retomar' : displayTime}
+            </Text>
+          </TouchableOpacity>
+
+          <TouchableOpacity
+            onPress={() => setMinuteOffset((m) => m + 1)}
+            style={styles.seekBtn}
+          >
+            <Text style={styles.seekBtnText}>+1m</Text>
+          </TouchableOpacity>
+
+          <TouchableOpacity
+            onPress={() => setMinuteOffset((m) => m + 5)}
+            style={styles.seekBtn}
+          >
+            <Text style={styles.seekBtnText}>+5m</Text>
+            <Ionicons name="play-forward-outline" size={14} color={COLORS.textPrimary} />
+          </TouchableOpacity>
+        </View>
+
+        {/* SPEED CONTROLS (ACELERAR / REDUZIR) */}
+        <View style={styles.speedSection}>
+          <View style={styles.speedHeader}>
+            <Text style={styles.speedLabel}>Velocidade de Reprodução</Text>
+            <View style={styles.speedStepperRow}>
+              <TouchableOpacity
+                onPress={() => adjustSpeed(-1)}
+                disabled={speedIndex === 0}
+                style={[styles.stepBtn, speedIndex === 0 && styles.stepBtnDisabled]}
+              >
+                <Ionicons name="remove" size={15} color={COLORS.textPrimary} />
+                <Text style={styles.stepBtnText}>Reduzir</Text>
+              </TouchableOpacity>
+
+              <View style={styles.currentSpeedBadge}>
+                <Text style={styles.currentSpeedText}>{playbackSpeed}×</Text>
+              </View>
+
+              <TouchableOpacity
+                onPress={() => adjustSpeed(1)}
+                disabled={speedIndex === SPEED_STEPS.length - 1}
+                style={[
+                  styles.stepBtn,
+                  speedIndex === SPEED_STEPS.length - 1 && styles.stepBtnDisabled,
+                ]}
+              >
+                <Text style={styles.stepBtnText}>Acelerar</Text>
+                <Ionicons name="add" size={15} color={COLORS.textPrimary} />
+              </TouchableOpacity>
+            </View>
           </View>
-          <View style={styles.legendItem}>
-            <View style={[styles.legendDot, { backgroundColor: COLORS.warningAmber }]} />
-            <Text style={styles.legendText}>Detecção IA</Text>
+
+          <View style={styles.speedPillsRow}>
+            {SPEED_STEPS.map((spd, idx) => {
+              const active = idx === speedIndex;
+              return (
+                <TouchableOpacity
+                  key={spd}
+                  onPress={() => setSpeedIndex(idx)}
+                  style={[styles.speedPill, active && styles.speedPillActive]}
+                >
+                  <Text
+                    style={[
+                      styles.speedPillText,
+                      active && styles.speedPillTextActive,
+                    ]}
+                  >
+                    {spd}×
+                  </Text>
+                </TouchableOpacity>
+              );
+            })}
           </View>
+
+          <Text style={styles.playbackUriHint} numberOfLines={1}>
+            DVR Playback RTSP: {dvrPlaybackUri}
+          </Text>
         </View>
       </View>
 
       {/* FILTER HEADER */}
       <View style={styles.filterHeaderRow}>
         <Text style={styles.sectionTitle}>
-          Eventos Recentes ({filteredEvents.length})
+          Eventos de IA ({filteredEvents.length})
         </Text>
         {unacknowledgedCount > 0 && (
           <TouchableOpacity
@@ -254,16 +454,21 @@ export const EventsScreen: React.FC = () => {
                   )}
 
                   <TouchableOpacity
-                    onPress={() => openFullScreenCamera(evt.cameraId)}
+                    onPress={() => {
+                      setPlaybackCameraId(evt.cameraId);
+                      setSelectedHour(evt.timestamp.slice(0, 5));
+                      setMinuteOffset(0);
+                      setIsPaused(false);
+                    }}
                     style={styles.eventPrimaryBtn}
                     activeOpacity={0.75}
                   >
                     <Ionicons
-                      name="videocam-outline"
-                      size={14}
+                      name="play-circle-outline"
+                      size={15}
                       color={COLORS.brandPrimaryDark}
                     />
-                    <Text style={styles.eventPrimaryBtnText}>Ver Câmera</Text>
+                    <Text style={styles.eventPrimaryBtnText}>Reproduzir</Text>
                   </TouchableOpacity>
                 </View>
               </View>
@@ -285,7 +490,7 @@ const styles = StyleSheet.create({
     paddingBottom: SPACING.xxxl,
     gap: SPACING.md,
   },
-  dvrScrubberCard: {
+  playbackCard: {
     backgroundColor: COLORS.bgSurface,
     borderRadius: RADIUS.lg,
     padding: SPACING.lg,
@@ -298,7 +503,6 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    flexWrap: 'wrap',
     gap: 8,
   },
   dvrTitleWrap: {
@@ -308,41 +512,68 @@ const styles = StyleSheet.create({
   },
   dvrTitle: {
     color: COLORS.textPrimary,
-    fontSize: 14.5,
+    fontSize: 15,
     fontWeight: '700',
   },
-  dvrStatusChip: {
+  dateSwitchRow: {
     flexDirection: 'row',
-    alignItems: 'center',
-    gap: 6,
-    backgroundColor: COLORS.greenSoft,
-    paddingHorizontal: 9,
-    paddingVertical: 4,
-    borderRadius: RADIUS.pill,
+    backgroundColor: COLORS.bgSubtle,
+    padding: 3,
+    borderRadius: RADIUS.md,
+    gap: 2,
   },
-  dvrLiveDot: {
-    width: 6,
-    height: 6,
-    borderRadius: 3,
-    backgroundColor: COLORS.successGreen,
+  datePill: {
+    paddingHorizontal: 10,
+    paddingVertical: 5,
+    borderRadius: RADIUS.sm,
   },
-  dvrStatusText: {
-    color: COLORS.successGreen,
-    fontSize: 11,
+  datePillActive: {
+    backgroundColor: COLORS.bgSurface,
+    ...SHADOWS.card,
+  },
+  datePillText: {
+    color: COLORS.textSecondary,
+    fontSize: 11.5,
+    fontWeight: '600',
+  },
+  datePillTextActive: {
+    color: COLORS.textPrimary,
     fontWeight: '700',
+  },
+  channelRow: {
+    flexDirection: 'row',
+    gap: 6,
+  },
+  chPill: {
+    flex: 1,
+    alignItems: 'center',
+    paddingVertical: 7,
+    borderRadius: RADIUS.md,
+    backgroundColor: COLORS.bgSubtle,
+  },
+  chPillActive: {
+    backgroundColor: COLORS.brandPrimary,
+  },
+  chPillText: {
+    color: COLORS.textSecondary,
+    fontSize: 12,
+    fontWeight: '700',
+  },
+  chPillTextActive: {
+    color: '#FFFFFF',
   },
   scrubberTrack: {
     flexDirection: 'row',
-    gap: 6,
+    gap: 5,
   },
   scrubberSlot: {
     flex: 1,
     alignItems: 'center',
-    paddingVertical: 8,
-    paddingHorizontal: 4,
+    paddingVertical: 7,
+    paddingHorizontal: 3,
     borderRadius: RADIUS.md,
     backgroundColor: COLORS.bgSubtle,
-    gap: 6,
+    gap: 5,
   },
   scrubberSlotActive: {
     backgroundColor: COLORS.brandPrimarySoft,
@@ -351,7 +582,7 @@ const styles = StyleSheet.create({
   },
   scrubberBarTrack: {
     width: '100%',
-    height: 6,
+    height: 5,
     borderRadius: 3,
     backgroundColor: COLORS.borderSubtle,
     overflow: 'hidden',
@@ -362,30 +593,131 @@ const styles = StyleSheet.create({
   },
   scrubberHourLabel: {
     color: COLORS.textSecondary,
-    fontSize: 11,
+    fontSize: 10.5,
     fontWeight: '600',
   },
   scrubberHourLabelActive: {
     color: COLORS.brandPrimaryDark,
     fontWeight: '700',
   },
-  legendRow: {
+  transportRow: {
     flexDirection: 'row',
-    gap: SPACING.lg,
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    gap: 6,
   },
-  legendItem: {
+  seekBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 3,
+    backgroundColor: COLORS.bgSubtle,
+    paddingHorizontal: 10,
+    paddingVertical: 8,
+    borderRadius: RADIUS.md,
+  },
+  seekBtnText: {
+    color: COLORS.textPrimary,
+    fontSize: 11.5,
+    fontWeight: '700',
+  },
+  playPauseBtn: {
+    flex: 1,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 6,
+    backgroundColor: COLORS.brandPrimary,
+    paddingVertical: 9,
+    borderRadius: RADIUS.md,
+  },
+  playPauseText: {
+    color: '#FFFFFF',
+    fontSize: 12.5,
+    fontWeight: '700',
+  },
+  speedSection: {
+    backgroundColor: COLORS.bgCanvas,
+    borderRadius: RADIUS.md,
+    padding: SPACING.md,
+    borderWidth: 1,
+    borderColor: COLORS.borderSubtle,
+    gap: SPACING.sm,
+  },
+  speedHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    flexWrap: 'wrap',
+    gap: 8,
+  },
+  speedLabel: {
+    color: COLORS.textPrimary,
+    fontSize: 12.5,
+    fontWeight: '700',
+  },
+  speedStepperRow: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: 6,
   },
-  legendDot: {
-    width: 8,
-    height: 8,
-    borderRadius: 4,
+  stepBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 3,
+    backgroundColor: COLORS.bgSurface,
+    borderWidth: 1,
+    borderColor: COLORS.borderSubtle,
+    paddingHorizontal: 9,
+    paddingVertical: 5,
+    borderRadius: RADIUS.sm,
   },
-  legendText: {
+  stepBtnDisabled: {
+    opacity: 0.4,
+  },
+  stepBtnText: {
+    color: COLORS.textPrimary,
+    fontSize: 11,
+    fontWeight: '700',
+  },
+  currentSpeedBadge: {
+    backgroundColor: COLORS.brandPrimarySoft,
+    paddingHorizontal: 10,
+    paddingVertical: 5,
+    borderRadius: RADIUS.sm,
+  },
+  currentSpeedText: {
+    color: COLORS.brandPrimaryDark,
+    fontSize: 12,
+    fontWeight: '800',
+  },
+  speedPillsRow: {
+    flexDirection: 'row',
+    gap: 6,
+  },
+  speedPill: {
+    flex: 1,
+    alignItems: 'center',
+    paddingVertical: 6,
+    borderRadius: RADIUS.sm,
+    backgroundColor: COLORS.bgSurface,
+    borderWidth: 1,
+    borderColor: COLORS.borderSubtle,
+  },
+  speedPillActive: {
+    backgroundColor: COLORS.brandPrimary,
+    borderColor: COLORS.brandPrimary,
+  },
+  speedPillText: {
     color: COLORS.textSecondary,
     fontSize: 11.5,
+    fontWeight: '700',
+  },
+  speedPillTextActive: {
+    color: '#FFFFFF',
+  },
+  playbackUriHint: {
+    color: COLORS.textMuted,
+    fontSize: 10.5,
   },
   filterHeaderRow: {
     flexDirection: 'row',

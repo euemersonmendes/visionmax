@@ -6,17 +6,34 @@ import Hls from 'hls.js';
 interface HlsVideoPlayerProps {
   uri: string;
   muted: boolean;
+  playbackRate?: number;
+  paused?: boolean;
   onError: () => void;
 }
 
 export const HlsVideoPlayer: React.FC<HlsVideoPlayerProps> = ({
   uri,
   muted,
+  playbackRate = 1.0,
+  paused = false,
   onError,
 }) => {
   const videoRef = useRef<HTMLVideoElement | null>(null);
   const onErrorRef = useRef(onError);
   onErrorRef.current = onError;
+
+  useEffect(() => {
+    if (Platform.OS !== 'web') return;
+    const videoEl = videoRef.current;
+    if (!videoEl) return;
+
+    videoEl.playbackRate = playbackRate;
+    if (paused) {
+      videoEl.pause();
+    } else {
+      videoEl.play().catch(() => {});
+    }
+  }, [playbackRate, paused]);
 
   useEffect(() => {
     if (Platform.OS !== 'web') return;
@@ -81,7 +98,9 @@ export const HlsVideoPlayer: React.FC<HlsVideoPlayerProps> = ({
       source={{ uri }}
       style={styles.nativeVideo}
       resizeMode={ResizeMode.COVER}
-      shouldPlay
+      shouldPlay={!paused}
+      rate={playbackRate}
+      shouldCorrectPitch
       isLooping
       isMuted={muted}
       onError={() => onErrorRef.current()}

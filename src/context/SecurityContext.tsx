@@ -12,6 +12,7 @@ import {
   StreamSubtype,
   DiscoveredNetworkDevice,
   IntelbrasSystemConfig,
+  ComputerVisionSettings,
 } from '../types/security';
 import { buildCameraStreamUrl } from '../utils/cameraUrlBuilder';
 import { loadStorageItem, saveStorageItem, removeStorageItem } from '../utils/storage';
@@ -60,8 +61,19 @@ export interface UpdateCameraConfigPayload {
   aiDetectionEnabled?: boolean;
 }
 
+export const DEFAULT_CV_SETTINGS: ComputerVisionSettings = {
+  confidenceThreshold: 75,
+  detectPersons: true,
+  detectVehicles: true,
+  detectPets: true,
+  intrusionLineEnabled: true,
+  loiteringAlertEnabled: true,
+  privacyMaskEnabled: false,
+};
+
 interface SecurityContextType {
   intelbrasConfig: IntelbrasSystemConfig;
+  cvSettings: ComputerVisionSettings;
   cameras: CameraDevice[];
   events: SecurityEvent[];
   sensors: SmartDeviceSensor[];
@@ -95,6 +107,7 @@ interface SecurityContextType {
   resetCameraPTZ: (id: string) => void;
   takeSnapshot: (id: string) => void;
   updateCameraConfig: (id: string, config: UpdateCameraConfigPayload) => void;
+  updateCvSettings: (patch: Partial<ComputerVisionSettings>) => void;
   applyIntelbrasSystemConfig: (config: IntelbrasSystemConfig) => void;
   resetToDemoMode: () => void;
   applyGlobalDvrCredentials: (params: {
@@ -161,6 +174,7 @@ const INITIAL_CAMERAS: CameraDevice[] = [
     activeDetections: [
       {
         id: 'det-1',
+        trackId: 'TRK-041',
         label: 'Pessoa (Entregador)',
         confidence: 98,
         type: 'PERSON',
@@ -168,6 +182,8 @@ const INITIAL_CAMERAS: CameraDevice[] = [
         y: 32,
         width: 18,
         height: 44,
+        dwellSec: 12,
+        zoneStatus: 'TRIPWIRE_CROSSED',
       },
     ],
     telemetry: {
@@ -224,13 +240,16 @@ const INITIAL_CAMERAS: CameraDevice[] = [
     activeDetections: [
       {
         id: 'det-2',
-        label: 'Veículo Estacionado (SUV)',
+        trackId: 'TRK-018',
+        label: 'Veículo (SUV)',
         confidence: 99,
         type: 'VEHICLE',
         x: 22,
         y: 38,
         width: 54,
         height: 42,
+        dwellSec: 145,
+        zoneStatus: 'NORMAL',
       },
     ],
     telemetry: {
@@ -287,13 +306,16 @@ const INITIAL_CAMERAS: CameraDevice[] = [
     activeDetections: [
       {
         id: 'det-3',
-        label: 'Pet / Movimento Leve',
+        trackId: 'TRK-027',
+        label: 'Pet / Movimento',
         confidence: 91,
         type: 'PET',
         x: 58,
         y: 56,
         width: 14,
         height: 18,
+        dwellSec: 6,
+        zoneStatus: 'NORMAL',
       },
     ],
     telemetry: {
@@ -569,6 +591,7 @@ export const SecurityProvider: React.FC<{ children: React.ReactNode }> = ({ chil
   const [allAudioMuted, setAllAudioMuted] = useState<boolean>(true);
   const [snapshotsCount, setSnapshotsCount] = useState<number>(14);
   const [lastToastMessage, setLastToastMessage] = useState<string | null>(null);
+  const [cvSettings, setCvSettings] = useState<ComputerVisionSettings>(DEFAULT_CV_SETTINGS);
 
   const showToast = useCallback((msg: string) => {
     setLastToastMessage(msg);
@@ -893,6 +916,14 @@ export const SecurityProvider: React.FC<{ children: React.ReactNode }> = ({ chil
     [cameras, showToast]
   );
 
+  const updateCvSettings = useCallback(
+    (patch: Partial<ComputerVisionSettings>) => {
+      setCvSettings((prev) => ({ ...prev, ...patch }));
+      showToast('Parâmetros de Visão Computacional atualizados.');
+    },
+    [showToast]
+  );
+
   const applyIntelbrasSystemConfig = useCallback(
     (config: IntelbrasSystemConfig) => {
       const nextConfig: IntelbrasSystemConfig = {
@@ -1116,6 +1147,7 @@ export const SecurityProvider: React.FC<{ children: React.ReactNode }> = ({ chil
     <SecurityContext.Provider
       value={{
         intelbrasConfig,
+        cvSettings,
         cameras,
         events,
         sensors,
@@ -1149,6 +1181,7 @@ export const SecurityProvider: React.FC<{ children: React.ReactNode }> = ({ chil
         resetCameraPTZ,
         takeSnapshot,
         updateCameraConfig,
+        updateCvSettings,
         applyIntelbrasSystemConfig,
         resetToDemoMode,
         applyGlobalDvrCredentials,

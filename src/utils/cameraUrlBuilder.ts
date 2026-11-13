@@ -190,3 +190,22 @@ export function buildCameraStreamUrl(params: CameraConnectionParams): {
     recommendedUrl,
   };
 }
+
+export function buildDvrPlaybackUrl(params: {
+  ipAddress: string;
+  rtspPort: number;
+  username: string;
+  password: string;
+  channel: number;
+  dateIso: string; // YYYY-MM-DD
+  timeStr: string; // HH:MM
+}): string {
+  const host = (params.ipAddress || '192.168.3.9').trim();
+  const rPort = params.rtspPort || 554;
+  const user = encodeURIComponent((params.username || 'admin').trim());
+  const pass = encodeURIComponent(params.password || '');
+  const authPart = user ? (pass ? `${user}:${pass}@` : `${user}@`) : '';
+  const dateCompact = params.dateIso.replace(/-/g, '_');
+  const timeCompact = `${params.timeStr.replace(':', '_')}_00`;
+  return `rtsp://${authPart}${host}:${rPort}/cam/playback?channel=${params.channel}&starttime=${dateCompact}_${timeCompact}`;
+}

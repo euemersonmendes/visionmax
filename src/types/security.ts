@@ -53,6 +53,7 @@ export interface PTZPreset {
 
 export interface BoundingBox {
   id: string;
+  trackId?: string;
   label: string;
   confidence: number;
   type: 'PERSON' | 'VEHICLE' | 'PET';
@@ -60,6 +61,18 @@ export interface BoundingBox {
   y: number; // percentage 0..70
   width: number;
   height: number;
+  dwellSec?: number;
+  zoneStatus?: 'NORMAL' | 'TRIPWIRE_CROSSED' | 'LOITERING';
+}
+
+export interface ComputerVisionSettings {
+  confidenceThreshold: number; // 50..95
+  detectPersons: boolean;
+  detectVehicles: boolean;
+  detectPets: boolean;
+  intrusionLineEnabled: boolean;
+  loiteringAlertEnabled: boolean;
+  privacyMaskEnabled: boolean;
 }
 
 export interface CameraTelemetry {

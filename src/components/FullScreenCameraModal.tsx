@@ -19,6 +19,7 @@ const ZOOM_STEPS = [1.0, 1.5, 2.0, 3.0, 4.0];
 export const FullScreenCameraModal: React.FC = () => {
   const {
     cameras,
+    cvSettings,
     fullScreenCameraId,
     openFullScreenCamera,
     closeFullScreenCamera,
@@ -32,6 +33,7 @@ export const FullScreenCameraModal: React.FC = () => {
     toggleCameraSiren,
     toggleCameraRecording,
     toggleCameraAiBoxes,
+    updateCvSettings,
     cycleNightVision,
     takeSnapshot,
   } = useSecurity();
@@ -466,6 +468,105 @@ export const FullScreenCameraModal: React.FC = () => {
               </TouchableOpacity>
             </View>
           </View>
+
+          {/* COMPUTER VISION & EDGE ANALYTICS PANEL */}
+          <View style={styles.sectionCard}>
+            <View style={styles.cardHeaderRow}>
+              <Text style={styles.cardTitle}>Visão Computacional (Analytics IA)</Text>
+              <Text style={styles.cardBadge}>
+                Confiança ≥ {cvSettings.confidenceThreshold}%
+              </Text>
+            </View>
+
+            <View style={styles.cvChipsRow}>
+              {[
+                {
+                  label: 'Pessoas',
+                  active: cvSettings.detectPersons,
+                  onPress: () => updateCvSettings({ detectPersons: !cvSettings.detectPersons }),
+                },
+                {
+                  label: 'Veículos',
+                  active: cvSettings.detectVehicles,
+                  onPress: () =>
+                    updateCvSettings({ detectVehicles: !cvSettings.detectVehicles }),
+                },
+                {
+                  label: 'Pets',
+                  active: cvSettings.detectPets,
+                  onPress: () => updateCvSettings({ detectPets: !cvSettings.detectPets }),
+                },
+                {
+                  label: 'Linha Virtual',
+                  active: cvSettings.intrusionLineEnabled,
+                  onPress: () =>
+                    updateCvSettings({
+                      intrusionLineEnabled: !cvSettings.intrusionLineEnabled,
+                    }),
+                },
+                {
+                  label: 'Máscara Priv.',
+                  active: cvSettings.privacyMaskEnabled,
+                  onPress: () =>
+                    updateCvSettings({
+                      privacyMaskEnabled: !cvSettings.privacyMaskEnabled,
+                    }),
+                },
+              ].map((item) => (
+                <TouchableOpacity
+                  key={item.label}
+                  onPress={item.onPress}
+                  style={[styles.cvChip, item.active && styles.cvChipActive]}
+                >
+                  <Text
+                    style={[
+                      styles.cvChipText,
+                      item.active && styles.cvChipTextActive,
+                    ]}
+                  >
+                    {item.label}
+                  </Text>
+                </TouchableOpacity>
+              ))}
+            </View>
+
+            <View style={styles.zoomTrack}>
+              {[60, 75, 85, 95].map((thr) => {
+                const active = cvSettings.confidenceThreshold === thr;
+                return (
+                  <TouchableOpacity
+                    key={thr}
+                    onPress={() => updateCvSettings({ confidenceThreshold: thr })}
+                    style={[styles.zoomStepBtn, active && styles.zoomStepBtnActive]}
+                  >
+                    <Text
+                      style={[
+                        styles.zoomStepText,
+                        active && styles.zoomStepTextActive,
+                      ]}
+                    >
+                      {thr}%
+                    </Text>
+                  </TouchableOpacity>
+                );
+              })}
+            </View>
+
+            {activeCamera.activeDetections.length > 0 && (
+              <View style={styles.tracksList}>
+                {activeCamera.activeDetections.map((det) => (
+                  <View key={det.id} style={styles.trackRow}>
+                    <Text style={styles.trackId}>
+                      {det.trackId || 'TRK'} • {det.label}
+                    </Text>
+                    <Text style={styles.trackMeta}>
+                      {det.confidence}%{det.dwellSec ? ` • ${det.dwellSec}s na zona` : ''}
+                    </Text>
+                  </View>
+                ))}
+              </View>
+            )}
+          </View>
         </ScrollView>
       </SafeAreaView>
     </Modal>
@@ -790,5 +891,57 @@ const styles = StyleSheet.create({
     fontSize: 11.5,
     fontWeight: '700',
     textAlign: 'center',
+  },
+  cvChipsRow: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 6,
+    marginBottom: SPACING.md,
+  },
+  cvChip: {
+    backgroundColor: COLORS.bgSubtle,
+    paddingHorizontal: 10,
+    paddingVertical: 6,
+    borderRadius: RADIUS.pill,
+    borderWidth: 1,
+    borderColor: 'transparent',
+  },
+  cvChipActive: {
+    backgroundColor: COLORS.brandPrimarySoft,
+    borderColor: COLORS.brandPrimaryBorder,
+  },
+  cvChipText: {
+    color: COLORS.textSecondary,
+    fontSize: 11.5,
+    fontWeight: '600',
+  },
+  cvChipTextActive: {
+    color: COLORS.brandPrimaryDark,
+    fontWeight: '700',
+  },
+  tracksList: {
+    marginTop: SPACING.md,
+    gap: 6,
+  },
+  trackRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    backgroundColor: COLORS.bgCanvas,
+    paddingHorizontal: 10,
+    paddingVertical: 8,
+    borderRadius: RADIUS.sm,
+    borderWidth: 1,
+    borderColor: COLORS.borderSubtle,
+  },
+  trackId: {
+    color: COLORS.textPrimary,
+    fontSize: 12,
+    fontWeight: '700',
+  },
+  trackMeta: {
+    color: COLORS.brandPrimaryDark,
+    fontSize: 11.5,
+    fontWeight: '600',
   },
 });

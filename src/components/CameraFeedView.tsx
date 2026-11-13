@@ -9,6 +9,7 @@ import {
 } from 'react-native';
 import { Ionicons, MaterialCommunityIcons } from '@expo/vector-icons';
 import { HlsVideoPlayer } from './HlsVideoPlayer';
+import { useSecurity } from '../context/SecurityContext';
 import { CameraDevice } from '../types/security';
 import { COLORS } from '../theme/colors';
 import { RADIUS, SHADOWS, SPACING } from '../theme/tokens';
@@ -18,6 +19,8 @@ interface CameraFeedViewProps {
   compact?: boolean;
   fillContainer?: boolean;
   isFullScreen?: boolean;
+  playbackRate?: number;
+  paused?: boolean;
   onPressFeed?: () => void;
   onToggleMute?: () => void;
   onToggleSpotlight?: () => void;
@@ -29,11 +32,14 @@ export const CameraFeedView: React.FC<CameraFeedViewProps> = ({
   compact = false,
   fillContainer = false,
   isFullScreen = false,
+  playbackRate = 1.0,
+  paused = false,
   onPressFeed,
   onToggleMute,
   onToggleSpotlight,
   onTakeSnapshot,
 }) => {
+  const { cvSettings } = useSecurity();
   const [clockStr, setClockStr] = useState<string>('');
   const [pulseOn, setPulseOn] = useState<boolean>(true);
   const [streamError, setStreamError] = useState<boolean>(false);
@@ -243,6 +249,8 @@ export const CameraFeedView: React.FC<CameraFeedViewProps> = ({
           <HlsVideoPlayer
             uri={camera.streamUrl}
             muted={camera.audioMuted}
+            playbackRate={playbackRate}
+            paused={paused}
             onError={() => setStreamError(true)}
           />
         ) : isMjpegStream && !streamError ? (
@@ -278,47 +286,81 @@ export const CameraFeedView: React.FC<CameraFeedViewProps> = ({
           </View>
         )}
 
-        {/* AI Bounding Boxes */}
+        {/* Virtual Intrusion Tripwire Overlay */}
         {camera.aiDetectionEnabled &&
           camera.aiBoundingBoxesVisible &&
-          camera.activeDetections.map((det) => (
-            <View
-              key={det.id}
-              style={[
-                styles.boundingBox,
-                {
-                  left: `${det.x}%`,
-                  top: `${det.y}%`,
-                  width: `${det.width}%`,
-                  height: `${det.height}%`,
-                  borderColor:
-                    det.type === 'PERSON'
-                      ? '#F59E0B'
-                      : det.type === 'VEHICLE'
-                      ? '#14B8A6'
-                      : '#38BDF8',
-                },
-              ]}
-            >
-              {!compact && (
+          cvSettings.intrusionLineEnabled &&
+          !compact && (
+            <View style={styles.tripwireOverlay} pointerEvents="none">
+              <View style={styles.tripwireLine} />
+              <View style={styles.tripwireTag}>
+                <Text style={styles.tripwireTagText}>LINHA VIRTUAL • PERÍMETRO</Text>
+              </View>
+            </View>
+          )}
+
+        {/* Privacy Mask Overlay */}
+        {cvSettings.privacyMaskEnabled && (
+          <View style={styles.privacyMaskZone} pointerEvents="none">
+            <Text style={styles.privacyMaskLabel}>MÁSCARA DE PRIVACIDADE</Text>
+          </View>
+        )}
+
+        {/* Professional Computer Vision Bounding Boxes */}
+        {camera.aiDetectionEnabled &&
+          camera.aiBoundingBoxesVisible &&
+          camera.activeDetections
+            .filter((det) => {
+              if (det.confidence < cvSettings.confidenceThreshold) return false;
+              if (det.type === 'PERSON' && !cvSettings.detectPersons) return false;
+              if (det.type === 'VEHICLE' && !cvSettings.detectVehicles) return false;
+              if (det.type === 'PET' && !cvSettings.detectPets) return false;
+              return true;
+            })
+            .map((det) => {
+              const boxColor =
+                det.zoneStatus === 'TRIPWIRE_CROSSED'
+                  ? '#F59E0B'
+                  : det.type === 'VEHICLE'
+                  ? '#14B8A6'
+                  : '#38BDF8';
+              return (
                 <View
+                  key={det.id}
                   style={[
-                    styles.bboxLabelPill,
+                    styles.boundingBox,
                     {
-                      backgroundColor:
-                        det.type === 'PERSON'
-                          ? 'rgba(217, 119, 6, 0.9)'
-                          : 'rgba(13, 148, 136, 0.9)',
+                      left: `${det.x}%`,
+                      top: `${det.y}%`,
+                      width: `${det.width}%`,
+                      height: `${det.height}%`,
+                      borderColor: boxColor,
                     },
                   ]}
+                  pointerEvents="none"
                 >
-                  <Text style={styles.bboxLabelText}>
-                    {det.label} {det.confidence}%
-                  </Text>
+                  <View style={[styles.cornerTL, { borderColor: boxColor }]} />
+                  <View style={[styles.cornerTR, { borderColor: boxColor }]} />
+                  <View style={[styles.cornerBL, { borderColor: boxColor }]} />
+                  <View style={[styles.cornerBR, { borderColor: boxColor }]} />
+
+                  {!compact && (
+                    <View
+                      style={[
+                        styles.bboxLabelPill,
+                        { backgroundColor: boxColor },
+                      ]}
+                    >
+                      <Text style={styles.bboxLabelText}>
+                        {det.trackId ? `${det.trackId} • ` : ''}
+                        {det.label} {det.confidence}%
+                        {det.dwellSec ? ` • ${det.dwellSec}s` : ''}
+                      </Text>
+                    </View>
+                  )}
                 </View>
-              )}
-            </View>
-          ))}
+              );
+            })}
 
         {/* TOP OSD: Channel + Live + Resolution */}
         <View style={styles.osdTopRow}>
@@ -713,8 +755,90 @@ const styles = StyleSheet.create({
   },
   boundingBox: {
     position: 'absolute',
-    borderWidth: 1.5,
+    borderWidth: 1,
+    borderRadius: 3,
+    backgroundColor: 'rgba(15, 23, 42, 0.12)',
+  },
+  cornerTL: {
+    position: 'absolute',
+    top: -1,
+    left: -1,
+    width: 10,
+    height: 10,
+    borderTopWidth: 2.5,
+    borderLeftWidth: 2.5,
+  },
+  cornerTR: {
+    position: 'absolute',
+    top: -1,
+    right: -1,
+    width: 10,
+    height: 10,
+    borderTopWidth: 2.5,
+    borderRightWidth: 2.5,
+  },
+  cornerBL: {
+    position: 'absolute',
+    bottom: -1,
+    left: -1,
+    width: 10,
+    height: 10,
+    borderBottomWidth: 2.5,
+    borderLeftWidth: 2.5,
+  },
+  cornerBR: {
+    position: 'absolute',
+    bottom: -1,
+    right: -1,
+    width: 10,
+    height: 10,
+    borderBottomWidth: 2.5,
+    borderRightWidth: 2.5,
+  },
+  tripwireOverlay: {
+    position: 'absolute',
+    top: '62%',
+    left: '6%',
+    right: '6%',
+    alignItems: 'flex-end',
+  },
+  tripwireLine: {
+    width: '100%',
+    height: 1.5,
+    borderWidth: 1,
+    borderStyle: 'dashed',
+    borderColor: 'rgba(20, 184, 166, 0.72)',
+  },
+  tripwireTag: {
+    marginTop: 4,
+    backgroundColor: 'rgba(13, 148, 136, 0.85)',
+    paddingHorizontal: 6,
+    paddingVertical: 2,
     borderRadius: 4,
+  },
+  tripwireTagText: {
+    color: '#FFFFFF',
+    fontSize: 8.5,
+    fontWeight: '800',
+    letterSpacing: 0.3,
+  },
+  privacyMaskZone: {
+    position: 'absolute',
+    top: '18%',
+    right: '6%',
+    width: '28%',
+    height: '24%',
+    backgroundColor: 'rgba(15, 23, 42, 0.92)',
+    borderRadius: 4,
+    borderWidth: 1,
+    borderColor: 'rgba(148, 163, 184, 0.4)',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  privacyMaskLabel: {
+    color: '#94A3B8',
+    fontSize: 8,
+    fontWeight: '700',
   },
   bboxLabelPill: {
     position: 'absolute',
