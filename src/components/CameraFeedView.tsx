@@ -7,8 +7,8 @@ import {
   Pressable,
   Image,
 } from 'react-native';
-import { Video, ResizeMode } from 'expo-av';
 import { Ionicons, MaterialCommunityIcons } from '@expo/vector-icons';
+import { HlsVideoPlayer } from './HlsVideoPlayer';
 import { CameraDevice } from '../types/security';
 import { COLORS } from '../theme/colors';
 import { RADIUS, SHADOWS, SPACING } from '../theme/tokens';
@@ -231,14 +231,9 @@ export const CameraFeedView: React.FC<CameraFeedViewProps> = ({
         ]}
       >
         {isHlsStream && !streamError ? (
-          <Video
-            source={{ uri: camera.streamUrl }}
-            style={styles.videoPlayer}
-            videoStyle={styles.videoElementCover as any}
-            resizeMode={ResizeMode.COVER}
-            shouldPlay
-            isLooping
-            isMuted={camera.audioMuted}
+          <HlsVideoPlayer
+            uri={camera.streamUrl}
+            muted={camera.audioMuted}
             onError={() => setStreamError(true)}
           />
         ) : isMjpegStream && !streamError ? (

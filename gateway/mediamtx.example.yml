@@ -12,7 +12,7 @@ hls: yes
 hlsAddress: :8888
 hlsAllowOrigins: ['*']
 hlsAlwaysRemux: yes
-hlsVariant: mpegts
+hlsVariant: fmp4
 hlsSegmentCount: 5
 hlsSegmentDuration: 1s
 hlsPartDuration: 200ms
