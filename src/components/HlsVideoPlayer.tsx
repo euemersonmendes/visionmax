@@ -15,35 +15,40 @@ export const HlsVideoPlayer: React.FC<HlsVideoPlayerProps> = ({
   onError,
 }) => {
   const videoRef = useRef<HTMLVideoElement | null>(null);
+  const onErrorRef = useRef(onError);
+  onErrorRef.current = onError;
 
   useEffect(() => {
     if (Platform.OS !== 'web') return;
     const videoEl = videoRef.current;
     if (!videoEl) return;
 
-    let hls: Hls | null = null;
+    const HlsClass: any = (Hls as any)?.default || Hls;
+    let hls: any = null;
 
     if (videoEl.canPlayType('application/vnd.apple.mpegurl')) {
       videoEl.src = uri;
       videoEl.play().catch(() => {});
-    } else if (Hls.isSupported()) {
-      hls = new Hls({
+    } else if (HlsClass && typeof HlsClass.isSupported === 'function' && HlsClass.isSupported()) {
+      hls = new HlsClass({
         enableWorker: true,
         lowLatencyMode: true,
         backBufferLength: 10,
+        manifestLoadingMaxRetry: 6,
+        manifestLoadingRetryDelay: 1000,
       });
       hls.loadSource(uri);
       hls.attachMedia(videoEl);
-      hls.on(Hls.Events.MANIFEST_PARSED, () => {
+      hls.on(HlsClass.Events.MANIFEST_PARSED, () => {
         videoEl.play().catch(() => {});
       });
-      hls.on(Hls.Events.ERROR, (_event, data) => {
-        if (data.fatal) {
-          onError();
+      hls.on(HlsClass.Events.ERROR, (_event: any, data: any) => {
+        if (data?.fatal) {
+          onErrorRef.current();
         }
       });
     } else {
-      onError();
+      onErrorRef.current();
     }
 
     return () => {
@@ -51,7 +56,7 @@ export const HlsVideoPlayer: React.FC<HlsVideoPlayerProps> = ({
         hls.destroy();
       }
     };
-  }, [uri, onError]);
+  }, [uri]);
 
   if (Platform.OS === 'web') {
     return (
@@ -67,7 +72,6 @@ export const HlsVideoPlayer: React.FC<HlsVideoPlayerProps> = ({
           display: 'block',
           backgroundColor: '#0F172A',
         }}
-        onError={onError}
       />
     );
   }
@@ -80,7 +84,7 @@ export const HlsVideoPlayer: React.FC<HlsVideoPlayerProps> = ({
       shouldPlay
       isLooping
       isMuted={muted}
-      onError={onError}
+      onError={() => onErrorRef.current()}
     />
   );
 };
