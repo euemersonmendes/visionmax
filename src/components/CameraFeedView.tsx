@@ -16,6 +16,7 @@ import { RADIUS, SHADOWS, SPACING } from '../theme/tokens';
 interface CameraFeedViewProps {
   camera: CameraDevice;
   compact?: boolean;
+  fillContainer?: boolean;
   isFullScreen?: boolean;
   onPressFeed?: () => void;
   onToggleMute?: () => void;
@@ -26,6 +27,7 @@ interface CameraFeedViewProps {
 export const CameraFeedView: React.FC<CameraFeedViewProps> = ({
   camera,
   compact = false,
+  fillContainer = false,
   isFullScreen = false,
   onPressFeed,
   onToggleMute,
@@ -221,12 +223,19 @@ export const CameraFeedView: React.FC<CameraFeedViewProps> = ({
   };
 
   return (
-    <View style={[styles.cardContainer, isFullScreen && styles.cardFullScreen]}>
+    <View
+      style={[
+        styles.cardContainer,
+        fillContainer && styles.cardFillContainer,
+        isFullScreen && styles.cardFullScreen,
+      ]}
+    >
       <Pressable
         onPress={onPressFeed}
         style={[
           styles.videoViewport,
           compact && styles.videoViewportCompact,
+          fillContainer && styles.videoViewportFill,
           isFullScreen && styles.videoViewportFull,
         ]}
       >
@@ -449,6 +458,10 @@ const styles = StyleSheet.create({
     borderRadius: RADIUS.lg,
     borderWidth: 0,
   },
+  cardFillContainer: {
+    flex: 1,
+    height: '100%',
+  },
   videoViewport: {
     width: '100%',
     aspectRatio: 16 / 9,
@@ -458,6 +471,11 @@ const styles = StyleSheet.create({
   },
   videoViewportCompact: {
     aspectRatio: 16 / 9,
+  },
+  videoViewportFill: {
+    flex: 1,
+    aspectRatio: undefined,
+    minHeight: 110,
   },
   videoViewportFull: {
     aspectRatio: 16 / 9,

@@ -82,135 +82,44 @@ export const MonitorScreen: React.FC<MonitorScreenProps> = ({ onOpenIntelbrasSet
   const focusedCam = cameras.find((c) => c.id === focusedCameraId) || cameras[0];
   const secondaryCams = cameras.filter((c) => c.id !== focusedCam.id);
 
-  const renderCameraGrid = () => {
-    if (layoutMode === 'QUAD_2X2') {
-      return (
-        <View style={styles.quadGridContainer}>
-          {cameras.map((cam) => (
-            <View key={cam.id} style={styles.quadCell}>
-              <CameraFeedView
-                camera={cam}
-                compact
-                onPressFeed={() => openFullScreenCamera(cam.id)}
-                onToggleMute={() => toggleCameraMute(cam.id)}
-                onToggleSpotlight={() => toggleCameraSpotlight(cam.id)}
-              />
-            </View>
-          ))}
-        </View>
-      );
-    }
+  const topRowCams = cameras.slice(0, 2);
+  const bottomRowCams = cameras.slice(2, 4);
 
-    if (layoutMode === 'FOCUS_PIP') {
-      return (
-        <View style={styles.focusLayoutContainer}>
-          <View style={styles.focusPrimaryCell}>
-            <CameraFeedView
-              camera={focusedCam}
-              onPressFeed={() => openFullScreenCamera(focusedCam.id)}
-              onToggleMute={() => toggleCameraMute(focusedCam.id)}
-              onToggleSpotlight={() => toggleCameraSpotlight(focusedCam.id)}
-              onTakeSnapshot={() => takeSnapshot(focusedCam.id)}
-            />
-          </View>
-
-          <View style={styles.focusThumbnailsRow}>
-            {secondaryCams.map((cam) => (
-              <View key={cam.id} style={styles.focusThumbCell}>
-                <CameraFeedView
-                  camera={cam}
-                  compact
-                  onPressFeed={() => setFocusedCameraId(cam.id)}
-                  onToggleMute={() => toggleCameraMute(cam.id)}
-                />
-              </View>
-            ))}
-          </View>
-        </View>
-      );
-    }
-
-    return (
-      <View style={styles.listLayoutContainer}>
-        {cameras.map((cam) => (
-          <View key={cam.id} style={styles.listCardWrapper}>
-            <View style={styles.listFeedHeight}>
-              <CameraFeedView
-                camera={cam}
-                onPressFeed={() => openFullScreenCamera(cam.id)}
-                onToggleMute={() => toggleCameraMute(cam.id)}
-                onToggleSpotlight={() => toggleCameraSpotlight(cam.id)}
-                onTakeSnapshot={() => takeSnapshot(cam.id)}
-              />
-            </View>
-            <View style={styles.listQuickFooter}>
-              <View style={styles.listMetaGroup}>
-                <Text style={styles.listModelText}>{cam.model}</Text>
-                <Text style={styles.listIpText}>
-                  {cam.ipAddress} • {cam.telemetry.latencyMs}ms • {cam.telemetry.tempCelsius}°C
-                </Text>
-              </View>
-              <TouchableOpacity
-                onPress={() => openFullScreenCamera(cam.id)}
-                style={styles.listExpandBtn}
-                activeOpacity={0.75}
-              >
-                <Ionicons name="expand-outline" size={15} color={COLORS.brandPrimaryDark} />
-                <Text style={styles.listExpandText}>Controlar</Text>
-              </TouchableOpacity>
-            </View>
-          </View>
-        ))}
-      </View>
-    );
-  };
-
-  return (
-    <ScrollView
-      style={styles.container}
-      contentContainerStyle={styles.scrollContent}
-      showsVerticalScrollIndicator={false}
-    >
-      {/* INTELBRAS ONBOARDING CALLOUT (WHEN IN DEMO MODE) */}
+  const renderTopControls = () => (
+    <View style={styles.topControlsWrap}>
+      {/* SETUP CALLOUT ONLY IF NOT CONFIGURED */}
       {!intelbrasConfig.isConfiguredByUser && !bannerDismissed && (
         <View style={styles.setupBanner}>
           <View style={styles.setupBannerLeft}>
-            <View style={styles.setupIconCircle}>
-              <MaterialCommunityIcons
-                name="router-wireless"
-                size={20}
-                color={COLORS.brandPrimary}
-              />
-            </View>
-            <View style={styles.setupTextCol}>
-              <Text style={styles.setupTitle}>Conecte seu DVR / NVR Intelbras</Text>
-              <Text style={styles.setupSubtitle}>
-                Insira seu IP local, Serial Cloud P2P ou DDNS para monitorar suas câmeras reais.
-              </Text>
-            </View>
+            <MaterialCommunityIcons
+              name="router-wireless"
+              size={18}
+              color={COLORS.brandPrimary}
+            />
+            <Text style={styles.setupTitle} numberOfLines={1}>
+              Conecte seu DVR / NVR Intelbras
+            </Text>
           </View>
-
           <View style={styles.setupActionsRow}>
             <TouchableOpacity
               onPress={onOpenIntelbrasSetup}
               style={styles.setupPrimaryBtn}
               activeOpacity={0.8}
             >
-              <Text style={styles.setupPrimaryBtnText}>Configurar agora</Text>
-              <Ionicons name="arrow-forward" size={14} color="#FFFFFF" />
+              <Text style={styles.setupPrimaryBtnText}>Configurar</Text>
             </TouchableOpacity>
             <TouchableOpacity
               onPress={() => setBannerDismissed(true)}
               style={styles.setupDismissBtn}
               activeOpacity={0.7}
             >
-              <Text style={styles.setupDismissText}>Depois</Text>
+              <Ionicons name="close" size={16} color={COLORS.textSecondary} />
             </TouchableOpacity>
           </View>
         </View>
       )}
 
-      {/* TOP STATUS & LAYOUT CONTROLS */}
+      {/* UNIFIED COMPACT CONTROL BAR */}
       <View style={styles.controlBar}>
         <View style={styles.telemetrySummary}>
           <View style={styles.onlinePill}>
@@ -221,6 +130,44 @@ export const MonitorScreen: React.FC<MonitorScreenProps> = ({ onOpenIntelbrasSet
           </View>
           <Text style={styles.bitrateText}>{totalBitrateMbps} Mbps</Text>
         </View>
+
+        <ScrollView
+          horizontal
+          showsHorizontalScrollIndicator={false}
+          contentContainerStyle={styles.modesInlineRow}
+        >
+          {SECURITY_MODES.map((m) => {
+            const active = securityMode === m.id;
+            return (
+              <TouchableOpacity
+                key={m.id}
+                onPress={() => setSecurityMode(m.id)}
+                activeOpacity={0.75}
+                style={[
+                  styles.modeChip,
+                  active && {
+                    backgroundColor: m.softBg,
+                    borderColor: m.color,
+                  },
+                ]}
+              >
+                <Ionicons
+                  name={m.icon}
+                  size={13}
+                  color={active ? m.color : COLORS.textSecondary}
+                />
+                <Text
+                  style={[
+                    styles.modeChipText,
+                    active && { color: m.color, fontWeight: '700' },
+                  ]}
+                >
+                  {m.label}
+                </Text>
+              </TouchableOpacity>
+            );
+          })}
+        </ScrollView>
 
         <View style={styles.rightControls}>
           <View style={styles.segmentedTrack}>
@@ -241,7 +188,7 @@ export const MonitorScreen: React.FC<MonitorScreenProps> = ({ onOpenIntelbrasSet
                 >
                   <Ionicons
                     name={opt.icon}
-                    size={14}
+                    size={13}
                     color={active ? COLORS.textPrimary : COLORS.textSecondary}
                   />
                   <Text
@@ -267,62 +214,122 @@ export const MonitorScreen: React.FC<MonitorScreenProps> = ({ onOpenIntelbrasSet
           >
             <Ionicons
               name={allAudioMuted ? 'volume-mute-outline' : 'volume-high-outline'}
-              size={17}
+              size={16}
               color={allAudioMuted ? COLORS.textSecondary : COLORS.brandPrimaryDark}
             />
           </TouchableOpacity>
         </View>
       </View>
+    </View>
+  );
 
-      {/* SECURITY MODE SELECTOR STRIP */}
-      <ScrollView
-        horizontal
-        showsHorizontalScrollIndicator={false}
-        contentContainerStyle={styles.modesScrollRow}
-      >
-        {SECURITY_MODES.map((m) => {
-          const active = securityMode === m.id;
-          return (
-            <TouchableOpacity
-              key={m.id}
-              onPress={() => setSecurityMode(m.id)}
-              activeOpacity={0.75}
-              style={[
-                styles.modeChip,
-                active && {
-                  backgroundColor: m.softBg,
-                  borderColor: m.color,
-                },
-              ]}
-            >
-              <Ionicons
-                name={m.icon}
-                size={15}
-                color={active ? m.color : COLORS.textSecondary}
-              />
-              <Text
-                style={[
-                  styles.modeChipText,
-                  active && { color: m.color, fontWeight: '700' },
-                ]}
-              >
-                {m.label}
-              </Text>
-            </TouchableOpacity>
-          );
-        })}
-      </ScrollView>
+  // QUAD 2x2: FITS ALL 4 CAMERAS IN THE SAME WINDOW WITHOUT SCROLLING
+  if (layoutMode === 'QUAD_2X2') {
+    return (
+      <View style={styles.quadWindowContainer}>
+        {renderTopControls()}
 
-      {/* CAMERA GRID */}
-      {renderCameraGrid()}
+        <View style={styles.quadRowsWrapper}>
+          <View style={styles.quadRow}>
+            {topRowCams.map((cam) => (
+              <View key={cam.id} style={styles.quadFlexCell}>
+                <CameraFeedView
+                  camera={cam}
+                  compact
+                  fillContainer
+                  onPressFeed={() => openFullScreenCamera(cam.id)}
+                  onToggleMute={() => toggleCameraMute(cam.id)}
+                  onToggleSpotlight={() => toggleCameraSpotlight(cam.id)}
+                />
+              </View>
+            ))}
+          </View>
 
-      {/* HELPFUL FOOTER HINT */}
-      <View style={styles.footerHint}>
-        <Ionicons name="hand-left-outline" size={14} color={COLORS.textMuted} />
-        <Text style={styles.footerHintText}>
-          Toque em qualquer câmera para abrir PTZ 360°, Zoom 4× e Áudio Bidirecional.
-        </Text>
+          <View style={styles.quadRow}>
+            {bottomRowCams.map((cam) => (
+              <View key={cam.id} style={styles.quadFlexCell}>
+                <CameraFeedView
+                  camera={cam}
+                  compact
+                  fillContainer
+                  onPressFeed={() => openFullScreenCamera(cam.id)}
+                  onToggleMute={() => toggleCameraMute(cam.id)}
+                  onToggleSpotlight={() => toggleCameraSpotlight(cam.id)}
+                />
+              </View>
+            ))}
+          </View>
+        </View>
       </View>
+    );
+  }
+
+  return (
+    <ScrollView
+      style={styles.container}
+      contentContainerStyle={styles.scrollContent}
+      showsVerticalScrollIndicator={false}
+    >
+      {renderTopControls()}
+
+      {layoutMode === 'FOCUS_PIP' ? (
+        <View style={styles.focusLayoutContainer}>
+          <View style={styles.focusPrimaryCell}>
+            <CameraFeedView
+              camera={focusedCam}
+              onPressFeed={() => openFullScreenCamera(focusedCam.id)}
+              onToggleMute={() => toggleCameraMute(focusedCam.id)}
+              onToggleSpotlight={() => toggleCameraSpotlight(focusedCam.id)}
+              onTakeSnapshot={() => takeSnapshot(focusedCam.id)}
+            />
+          </View>
+
+          <View style={styles.focusThumbnailsRow}>
+            {secondaryCams.map((cam) => (
+              <View key={cam.id} style={styles.focusThumbCell}>
+                <CameraFeedView
+                  camera={cam}
+                  compact
+                  onPressFeed={() => setFocusedCameraId(cam.id)}
+                  onToggleMute={() => toggleCameraMute(cam.id)}
+                />
+              </View>
+            ))}
+          </View>
+        </View>
+      ) : (
+        <View style={styles.listLayoutContainer}>
+          {cameras.map((cam) => (
+            <View key={cam.id} style={styles.listCardWrapper}>
+              <View style={styles.listFeedHeight}>
+                <CameraFeedView
+                  camera={cam}
+                  onPressFeed={() => openFullScreenCamera(cam.id)}
+                  onToggleMute={() => toggleCameraMute(cam.id)}
+                  onToggleSpotlight={() => toggleCameraSpotlight(cam.id)}
+                  onTakeSnapshot={() => takeSnapshot(cam.id)}
+                />
+              </View>
+              <View style={styles.listQuickFooter}>
+                <View style={styles.listMetaGroup}>
+                  <Text style={styles.listModelText}>{cam.model}</Text>
+                  <Text style={styles.listIpText}>
+                    {cam.ipAddress} • {cam.telemetry.latencyMs}ms • {cam.telemetry.tempCelsius}°C
+                  </Text>
+                </View>
+                <TouchableOpacity
+                  onPress={() => openFullScreenCamera(cam.id)}
+                  style={styles.listExpandBtn}
+                  activeOpacity={0.75}
+                >
+                  <Ionicons name="expand-outline" size={15} color={COLORS.brandPrimaryDark} />
+                  <Text style={styles.listExpandText}>Controlar</Text>
+                </TouchableOpacity>
+              </View>
+            </View>
+          ))}
+        </View>
+      )}
     </ScrollView>
   );
 };
@@ -333,74 +340,60 @@ const styles = StyleSheet.create({
     backgroundColor: COLORS.bgCanvas,
   },
   scrollContent: {
-    padding: SPACING.lg,
+    padding: SPACING.md,
     paddingBottom: SPACING.xxxl,
     gap: SPACING.md,
   },
+  quadWindowContainer: {
+    flex: 1,
+    backgroundColor: COLORS.bgCanvas,
+    padding: SPACING.md,
+    gap: SPACING.sm,
+  },
+  topControlsWrap: {
+    gap: SPACING.sm,
+  },
   setupBanner: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
     backgroundColor: COLORS.bgSurface,
-    borderRadius: RADIUS.lg,
-    padding: SPACING.lg,
+    borderRadius: RADIUS.md,
+    paddingHorizontal: SPACING.md,
+    paddingVertical: SPACING.sm,
     borderWidth: 1,
     borderColor: COLORS.brandPrimaryBorder,
-    gap: SPACING.md,
     ...SHADOWS.card,
   },
   setupBannerLeft: {
     flexDirection: 'row',
-    alignItems: 'flex-start',
-    gap: SPACING.md,
-  },
-  setupIconCircle: {
-    width: 40,
-    height: 40,
-    borderRadius: RADIUS.md,
-    backgroundColor: COLORS.brandPrimarySoft,
     alignItems: 'center',
-    justifyContent: 'center',
-  },
-  setupTextCol: {
+    gap: 8,
     flex: 1,
-    gap: 2,
   },
   setupTitle: {
     color: COLORS.textPrimary,
-    fontSize: 14.5,
+    fontSize: 13,
     fontWeight: '700',
-  },
-  setupSubtitle: {
-    color: COLORS.textSecondary,
-    fontSize: 12.5,
-    lineHeight: 18,
   },
   setupActionsRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: SPACING.sm,
+    gap: 6,
   },
   setupPrimaryBtn: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 6,
     backgroundColor: COLORS.brandPrimary,
-    paddingHorizontal: 14,
-    paddingVertical: 9,
-    borderRadius: RADIUS.md,
+    paddingHorizontal: 10,
+    paddingVertical: 6,
+    borderRadius: RADIUS.sm,
   },
   setupPrimaryBtnText: {
     color: '#FFFFFF',
-    fontSize: 12.5,
+    fontSize: 11.5,
     fontWeight: '700',
   },
   setupDismissBtn: {
-    paddingHorizontal: 12,
-    paddingVertical: 9,
-    borderRadius: RADIUS.md,
-  },
-  setupDismissText: {
-    color: COLORS.textSecondary,
-    fontSize: 12.5,
-    fontWeight: '600',
+    padding: 4,
   },
   controlBar: {
     flexDirection: 'row',
@@ -417,32 +410,53 @@ const styles = StyleSheet.create({
   onlinePill: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 6,
+    gap: 5,
     backgroundColor: COLORS.greenSoft,
-    paddingHorizontal: 10,
-    paddingVertical: 5,
+    paddingHorizontal: 9,
+    paddingVertical: 4,
     borderRadius: RADIUS.pill,
   },
   onlineDot: {
-    width: 7,
-    height: 7,
-    borderRadius: 4,
+    width: 6,
+    height: 6,
+    borderRadius: 3,
     backgroundColor: COLORS.successGreen,
   },
   onlineText: {
     color: COLORS.successGreen,
-    fontSize: 12,
+    fontSize: 11.5,
     fontWeight: '700',
   },
   bitrateText: {
     color: COLORS.textSecondary,
-    fontSize: 12,
+    fontSize: 11.5,
     fontWeight: '600',
+  },
+  modesInlineRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+  },
+  modeChip: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 5,
+    backgroundColor: COLORS.bgSurface,
+    borderWidth: 1,
+    borderColor: COLORS.borderSubtle,
+    paddingHorizontal: 10,
+    paddingVertical: 5,
+    borderRadius: RADIUS.pill,
+  },
+  modeChipText: {
+    fontSize: 11.5,
+    fontWeight: '600',
+    color: COLORS.textSecondary,
   },
   rightControls: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 8,
+    gap: 6,
   },
   segmentedTrack: {
     flexDirection: 'row',
@@ -455,8 +469,8 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     gap: 4,
-    paddingHorizontal: 10,
-    paddingVertical: 6,
+    paddingHorizontal: 9,
+    paddingVertical: 5,
     borderRadius: RADIUS.sm,
   },
   segmentBtnActive: {
@@ -464,7 +478,7 @@ const styles = StyleSheet.create({
     ...SHADOWS.card,
   },
   segmentLabel: {
-    fontSize: 11.5,
+    fontSize: 11,
     fontWeight: '600',
     color: COLORS.textSecondary,
   },
@@ -473,8 +487,8 @@ const styles = StyleSheet.create({
     fontWeight: '700',
   },
   muteAllBtn: {
-    width: 34,
-    height: 34,
+    width: 32,
+    height: 32,
     borderRadius: RADIUS.md,
     backgroundColor: COLORS.bgSurface,
     borderWidth: 1,
@@ -486,35 +500,18 @@ const styles = StyleSheet.create({
     backgroundColor: COLORS.brandPrimarySoft,
     borderColor: COLORS.brandPrimaryBorder,
   },
-  modesScrollRow: {
-    gap: 8,
-    paddingVertical: 2,
+  quadRowsWrapper: {
+    flex: 1,
+    gap: SPACING.sm,
   },
-  modeChip: {
+  quadRow: {
+    flex: 1,
     flexDirection: 'row',
-    alignItems: 'center',
-    gap: 6,
-    backgroundColor: COLORS.bgSurface,
-    borderWidth: 1,
-    borderColor: COLORS.borderSubtle,
-    paddingHorizontal: 12,
-    paddingVertical: 8,
-    borderRadius: RADIUS.pill,
+    gap: SPACING.sm,
   },
-  modeChipText: {
-    fontSize: 12.5,
-    fontWeight: '600',
-    color: COLORS.textSecondary,
-  },
-  quadGridContainer: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    gap: SPACING.md,
-  },
-  quadCell: {
-    width: '48.2%',
-    minWidth: 155,
-    flexGrow: 1,
+  quadFlexCell: {
+    flex: 1,
+    height: '100%',
   },
   focusLayoutContainer: {
     gap: SPACING.md,
@@ -580,17 +577,5 @@ const styles = StyleSheet.create({
     color: COLORS.brandPrimaryDark,
     fontSize: 12,
     fontWeight: '700',
-  },
-  footerHint: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    gap: 6,
-    paddingTop: SPACING.xs,
-  },
-  footerHintText: {
-    color: COLORS.textMuted,
-    fontSize: 11.5,
-    textAlign: 'center',
   },
 });
